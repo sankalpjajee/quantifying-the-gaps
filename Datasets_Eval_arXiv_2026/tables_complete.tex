@@ -1,0 +1,120 @@
+% Complete LaTeX Tables for Multilingual AI Evaluation Taxonomy Paper
+% Generated from 65 benchmarks with complete data
+% Requires: booktabs package
+
+
+% Table 1: Summary Statistics
+\begin{table}[t]
+\centering
+\caption{Summary Statistics of the Multilingual Evaluation Benchmark Taxonomy}
+\label{tab:summary}
+\begin{tabular}{@{}lr@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Total Benchmarks & 65 \\
+Total Unique Languages & 139 \\
+Year Range & 2018--2025 \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{By Data Origin}} \\
+\quad Native & 48 (73.8\%) \\
+\quad Translated & 17 (26.2\%) \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{By Resource Tier}} \\
+\quad High & 46 (70.8\%) \\
+\quad Medium & 15 (23.1\%) \\
+\quad Low & 4 (6.2\%) \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{By Cultural Grounding}} \\
+\quad Universal & 36 (55.4\%) \\
+\quad Culturally Anchored & 17 (26.2\%) \\
+\quad Region-Specific & 12 (18.5\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 2: Task Class Distribution
+\begin{table}[t]
+\centering
+\caption{Distribution of Benchmarks by Task Class}
+\label{tab:tasks}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Task Class} & \textbf{Count} & \textbf{Percentage} \\
+\midrule
+QA & 20 & 30.8\% \\
+Syntax & 12 & 18.5\% \\
+Reasoning & 6 & 9.2\% \\
+Multimodal & 6 & 9.2\% \\
+NLU & 5 & 7.7\% \\
+Summarization & 4 & 6.2\% \\
+Math/Reasoning & 3 & 4.6\% \\
+RAG & 2 & 3.1\% \\
+Code & 2 & 3.1\% \\
+Generation & 2 & 3.1\% \\
+Other & 1 & 1.5\% \\
+Long Context & 1 & 1.5\% \\
+Embeddings & 1 & 1.5\% \\
+\midrule
+\textbf{Total} & \textbf{65} & \textbf{100.0\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 3: Top 20 Languages by Benchmark Coverage
+\begin{table}[t]
+\centering
+\caption{Top 20 Languages by Benchmark Coverage}
+\label{tab:languages}
+\begin{tabular}{@{}clr|clr@{}}
+\toprule
+\textbf{Rank} & \textbf{Language} & \textbf{Count} & \textbf{Rank} & \textbf{Language} & \textbf{Count} \\
+\midrule
+1 & English & 37 & 11 & Korean & 26 \\
+2 & Chinese & 35 & 12 & Italian & 25 \\
+3 & Spanish & 31 & 13 & Vietnamese & 24 \\
+4 & German & 30 & 14 & Thai & 23 \\
+5 & French & 30 & 15 & Indonesian & 23 \\
+6 & Russian & 30 & 16 & Turkish & 18 \\
+7 & Arabic & 28 & 17 & Dutch & 18 \\
+8 & Japanese & 28 & 18 & Czech & 15 \\
+9 & Hindi & 27 & 19 & Polish & 14 \\
+10 & Portuguese & 27 & 20 & Greek & 13 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 4: Benchmark Catalog (Selected Examples)
+\begin{table*}[t]
+\centering
+\caption{Selected Multilingual Evaluation Benchmarks (20 of 65)}
+\label{tab:catalog}
+\small
+\begin{tabular}{@{}llcrll@{}}
+\toprule
+\textbf{Benchmark} & \textbf{Task} & \textbf{Year} & \textbf{Langs} & \textbf{Origin} & \textbf{Cultural} \\
+\midrule
+xnli & NLU & 2018 & 15 & Translat & Universal \\
+Indic-XNLI & NLU & 2022 & 11 & Translat & Region-Speci \\
+NLI in SEACrowd & NLU & 2024 & 4 & Translat & Region-Speci \\
+Farstail & NLU & 2020 & 1 & Native & Culturally A \\
+AmericasNLI & NLU & 2022 & 10 & Native & Culturally A \\
+xsquad & QA & 2019 & 12 & Translat & Universal \\
+TeQuAD & QA & 2022 & 2 & Translat & Region-Speci \\
+KenSwQuAD & QA & 2023 & 1 & Native & Culturally A \\
+FQuAD2.0 & QA & 2022 & 1 & Native & Culturally A \\
+xcopa & Reasoning & 2020 & 11 & Translat & Universal \\
+xstorycloze & Reasoning & 2021 & 11 & Translat & Universal \\
+muBENCH & Other & 2024 & 10 & Native & Universal \\
+xwinograd & Reasoning & 2020 & 6 & Native & Universal \\
+winogrande & Reasoning & 2019 & 1 & Native & Universal \\
+MultiBLiMP & Syntax & 2025 & 101 & Native & Universal \\
+blimp and other lang... & Syntax & 2019 & 1 & Native & Universal \\
+ZhoBLiMP/SLING/CLiMP & Syntax & 2024 & 1 & Native & Culturally A \\
+TurBLiMP & Syntax & 2025 & 1 & Native & Culturally A \\
+BLiMP-NL & Syntax & 2023 & 1 & Native & Culturally A \\
+RuBLiMP & Syntax & 2024 & 1 & Native & Culturally A \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
