@@ -8,6 +8,7 @@
 \usepackage{caption}
 \frenchspacing
 \usepackage{booktabs}
+\usepackage{amssymb}
 \pdfinfo{/TemplateVersion (2027.1)}
 \setcounter{secnumdepth}{2}
 \title{Supplementary Material for ``Quantifying the Gaps: A Systematic Taxonomy of Bias and Imbalance in Multilingual AI Evaluation''}
@@ -82,6 +83,62 @@ After screening and deduplication, 96 resources were retained: 65 evaluation ben
 
 \subsection{How to Audit These Annotations}
 The classification criteria stated here and the complete per-resource annotations are public, so every cell of the analysis can be traced from a resource's primary paper, dataset card, and repository to its five-dimensional label. We explicitly invite the community to audit these annotations: if a reader believes a resource is misclassified on any axis---for example, that a majority-translated benchmark is labeled native, or that a tier assignment mistakes incidental coverage for designed scope---we welcome corrections through the public release accompanying this paper. Because every aggregate statistic in the paper is computed directly from these annotations, any accepted correction propagates transparently to the reported figures, and we will maintain the released annotations as a living, correctable record of the multilingual evaluation landscape.
+
+\section{Quantitative Companion Analyses}
+\label{sec:quant}
+This section derives the summary indices quoted in \S4 of the main paper and reports companion analyses. Every quantity below is computed solely from counts already printed in the main paper (Tables~1 and~2 and Figure~2); no unreleased data are required, so each derivation can be checked by hand.
+
+\subsection{Coverage Inequality Across the World's Languages}
+\label{sec:gini}
+Let $x_\ell$ be the number of the 65 benchmarks covering language $\ell$, over the population of roughly 7{,}000 living languages \cite{joshi2020state}. Table~2 of the main paper fixes the twenty largest values exactly (sum 502, from English at 37 down to Greek at 13); its caption bounds each of the remaining 119 covered languages at $1 \le x_\ell \le 13$; and the remaining $\sim$6{,}861 languages have $x_\ell = 0$. The Gini coefficient of this distribution is bracketed by the two extreme tail allocations consistent with these constraints: setting all 119 tail values to 13 (the \emph{most equal} feasible allocation, which also maximizes total coverage) yields $G = 0.9823$, and setting all 119 to 1 (the least equal) yields $G = 0.9937$, with $G$ monotone between these extremes (verified numerically over random feasible tails). Benchmark coverage across living languages therefore has a Gini coefficient between 0.982 and 0.994 \emph{regardless} of the unobserved tail values. Restricted to only the 139 covered languages, the same construction is uninformative ($G \in [0.106, 0.681]$); the all-languages population---the population over which the main paper's equity claims are made---is the appropriate frame. Figure~\ref{fig:supp-decay} shows the distribution itself: a twenty-language head, a bounded tail, and $6{,}800+$ languages at zero.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{supp_fig_decay.pdf}
+\caption{Benchmark coverage by language rank, drawn entirely from Table~2 of the main paper and its caption. The twenty verified head values account for 502 language--benchmark inclusions; the shaded band is the caption's upper bound of 13 for each of the 119 remaining covered languages. Only English and Chinese appear in a majority of the 65 benchmarks, and coverage falls 65\% (37$\to$13) within the head alone.}
+\label{fig:supp-decay}
+\end{figure}
+
+\subsection{Concentration Indices for the Task, Tier, and Cultural Axes}
+\label{sec:diversity}
+Effective-number diversity indices summarize how evenly the 65 benchmarks spread across nominal categories. Over the thirteen task classes (QA~20, syntax~12, reasoning~6, multimodal~6, NLU~5, summarization~4, math~3, RAG~2, code~2, generation~2, other~1, long-context~1, embeddings~1), the Herfindahl--Hirschman concentration is $\sum_i p_i^2 = 0.161$, an inverse-Simpson effective number of $6.2$ task classes; the Shannon entropy is 2.14 nats (perplexity 8.5; evenness 0.83 of the $\ln 13$ maximum). The field nominally spans thirteen capabilities but effectively measures about six. The resource-tier distribution (46/15/4) concentrates further: HHI $= 0.558$, an effective 1.8 of 3 tiers; the cultural axis (36/17/12) yields an effective 2.4 of 3 categories. These indices make the main paper's task monoculture (\S4.3) and tier skew (\S4.1) reportable as single numbers that audits of other evaluation ecosystems can reproduce for comparison.
+
+A cell-level corollary follows from the marginals alone: because only 4 of 65 benchmarks center low-resource languages, the low-resource row of the tier~$\times$~task matrix can contain at most 4 nonzero cells---at least 9 of its 13 cells are exactly empty, whichever tasks those four benchmarks cover. The emptiness of most low-resource capability cells named in the main paper's roadmap is thus guaranteed by arithmetic, not merely observed; identifying \emph{which} nine requires the released annotations.
+
+\subsection{Are the Benchmark and Dataset Distributions the Same? Homogeneity Tests}
+\label{sec:homogeneity}
+\S4.5 of the main paper reads evaluation gaps and data gaps as ``the same gap seen from two directions.'' Chi-square homogeneity tests on Table~1's marginals quantify the mirroring between the 65 benchmarks and 31 training datasets (Table~\ref{tab:homogeneity}): on no shared axis do the two populations differ detectably, and every effect size is small (largest Cram\'er's $V = 0.15$, on cultural grounding, driven by the datasets' higher universal share). Two caveats apply: non-rejection at $n = 96$ bounds similarity rather than proving equivalence---the effect sizes, not the $p$-values, carry the claim---and the low-tier cells have small expected counts (minimum 1.94), so the tier test is approximate. Figure~\ref{fig:supp-dumbbell} shows the eight category-level share comparisons directly.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Axis & $\chi^2$ & df & $p$ & Cram\'er's $V$ \\
+\midrule
+Origin (native/translated) & 0.00 & 1 & 0.97 & 0.00 \\
+Tier (high/medium/low) & 0.62 & 2 & 0.73 & 0.08 \\
+Cultural (univ./anch./region) & 2.29 & 2 & 0.32 & 0.15 \\
+\bottomrule
+\end{tabular}
+\caption{Homogeneity of the 65 benchmarks vs.\ the 31 training datasets on the three shared axes (counts from Table~1 of the main paper). Fisher's exact test on the origin axis gives $p = 1.00$.}
+\label{tab:homogeneity}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{supp_fig_dumbbell.pdf}
+\caption{Benchmark share (filled) vs.\ training-dataset share (open) for every category on the three shared axes---all sixteen values from Table~1 of the main paper. The supply side is more culture-stripped (universal $+15.6$ percentage points) and more high-tier-concentrated ($+6.6$\,pp) than the benchmarks it feeds, while the two sides neglect low-resource languages in near-identical proportion (6.2\% vs.\ 6.5\%).}
+\label{fig:supp-dumbbell}
+\end{figure}
+
+\subsection{Temporal Production: The Surge Is Evaluation-Only}
+\label{sec:temporal}
+Crossing the two per-year series in Figure~2 of the main paper yields the production comparison quoted in its caption. Through 2023, benchmark and training-dataset creation ran near parity: 27 benchmarks vs.\ 23 datasets (1.2:1). In 2024--2025 the ratio flipped to 38 vs.\ 8 (4.8:1); the association between era and resource type is significant (Fisher's exact test on the $2\times2$ table of era by resource type: odds ratio 4.05, $p = 0.004$). Cumulatively, 74.2\% of the training corpora but only 41.5\% of the benchmarks existed by the end of 2023 (benchmark milestones: 20.0\% by 2021, 41.5\% by 2023, 80.0\% by 2024). Descriptively, data supply has historically led evaluation by about a year: dataset production in year $t$ correlates with benchmark production in year $t{+}1$ at Pearson $r = 0.77$ over the seven overlapping year-pairs, versus $r = 0.47$ contemporaneously and $r = -0.30$ for the reverse lag. With so few years and a right-truncated 2025, we report these correlations as descriptive only; the era-level flip, not the lag, is the robust finding. Read with \S4.5 of the main paper, the implication is directional: the field is currently certifying capabilities faster than it is supplying the data to build them, and today's 6.5\% low-resource dataset share is positioned to cap the low-resource benchmark share for years.
+
+\subsection{What Would Count-Parity Take?}
+\label{sec:parity}
+The roughly 1.2 billion speakers of effectively unmeasured languages (\S1 of the main paper) are about 15\% of the world's population ($1.2/8.1 \approx 14.8\%$). Lifting the low-resource benchmark share from its current 6.2\% (4 of 65) to speaker-share parity would require only seven additional low-resource-centered benchmarks ($11/72 = 15.3\%$); the dataset side would require three ($5/34 = 14.7\%$). Against the field's 2024--2025 production rate of 19 benchmarks per year (38 in two years; Figure~2 of the main paper), seven benchmarks is about 4.4 months of output. Count-parity is a redirection of one research season, not a decade-scale program; parity of \emph{quality} additionally requires the natively sourced, culturally grounded construction that R1 and R2 of the main paper specify.
 
 \section{Per-Resource Structured Summaries: Training Datasets}
 
@@ -301,6 +358,79 @@ introduces a unified framework for multilingual LLM evaluation comprising HERCUL
 \paragraph{IrokoBench (2024)} \citep{adelani2024irokobench} curate a benchmark of 15 natural language understanding and generation tasks (including QA, summarization, and NER) across 20 major African languages, constructed entirely from natively created datasets developed by African researchers and native speakers. Evaluating over 30 LLMs shows proprietary models generally lead, yet all exhibit significant performance gaps relative to English, with wide variation across African languages and tasks.
 
 \paragraph{BuffetPrompt (2023)} \citep{asai2023buffetbenchmarkinglargelanguage} propose a framework for multi-turn reasoning in which models dynamically allocate tokens across reasoning steps, adaptively expanding or contracting reasoning based on task complexity. Benchmarked on GSM8K, MATH, AIME, GPQA, and OlympiadBench with GPT-4.1, Qwen2.5-Math-7B, and LLaMA-3.1-8B, it outperforms chain-of-thought and best-of-N baselines with significantly fewer tokens on average.
+
+\subsection{Case Study: One Language Through the Five Axes}
+\label{sec:swahili}
+Swahili illustrates how the measured imbalances compound within a single language. It does not appear among the twenty most-covered languages (Table~2 of the main paper), so it is covered by at most 13 of the 65 benchmarks. Where canonical suites include it, they include it in translation: XNLI's Swahili subset is professionally translated MultiNLI, and MGSM's is translated GSM8K (D1)---content authored in English, with cultural context inherited from Anglophone sources (D4). The only Swahili-dedicated benchmark in the corpus is KenSwQuAD, which is natively sourced---7{,}526 QA pairs from the Kenyan Kencorpus, annotated by trained native speakers---so dedicated native Swahili evaluation exists in one of thirteen task classes, where fine-tuned XLM-RoBERTa reaches 59.4 F1 (D3). Under direct multilingual inference the gaps persist across model scales: BenchMAX names Swahili among the low-resource languages where English--non-English gaps endure, while XNLI's translation-based baselines remain the strongest (D5). Every axis of the taxonomy is instantiated in one language---and Swahili, present in XNLI, MGSM, BenchMAX, and a dedicated native QA benchmark, is among the \emph{better}-served low-resource languages in the corpus, making this profile a plausible lower bound for the languages no benchmark reaches.
+
+\section{The Coverage Card: R5 as a Fill-In Template}
+\label{sec:card}
+Recommendation R5 of the main paper proposes the five axes as a reporting standard---``a datasheet for benchmarks.'' Figure~\ref{fig:card} shows that standard as a fill-in card a new evaluation resource can publish at release, following the template-plus-worked-example convention of datasheets and model cards \cite{gebru2021datasheets,bender2018data}. The corpus base rates printed at its foot let a builder see immediately whether a planned resource deepens a crowded cell or fills an empty one.
+
+\begin{figure}[t]
+\centering
+\fbox{\begin{minipage}{0.93\columnwidth}\small
+\textbf{Multilingual Evaluation Coverage Card (v1.0)}\\[2pt]
+\textbf{Resource:} \underline{\hspace{2.8cm}} \quad \textbf{Year:} \underline{\hspace{0.8cm}}\\[3pt]
+\textbf{D1 Data origin:} $\square$~native \quad $\square$~translated \ (majority-composition rule)\\
+\hspace*{6pt}if translated: $\square$~human $\square$~machine $\square$~post-edited; \ source: \underline{\hspace{1.2cm}}\\[2pt]
+\textbf{D2 Resource tier} (\emph{designed-to-evaluate}, not incidental):\\
+\hspace*{6pt}$\square$~high \ $\square$~medium \ $\square$~low; \ designed languages ($n$=\underline{\hspace{0.5cm}}): \underline{\hspace{1.9cm}}\\[2pt]
+\textbf{D3 Task class:} $\square$~QA $\square$~syntax $\square$~reasoning $\square$~multimodal $\square$~NLU $\square$~summ.\ $\square$~math $\square$~RAG $\square$~code $\square$~generation $\square$~long-context $\square$~embeddings $\square$~other\\[2pt]
+\textbf{D4 Cultural specificity:} $\square$~universal $\square$~culturally anchored $\square$~region-specific\\
+\hspace*{6pt}if universal: $\square$~culture-independent by design \ $\square$~context stripped/inherited\\[2pt]
+\textbf{D5 Inference paradigm:} $\square$~retrieval-style $\square$~multi-hop;\\
+\hspace*{6pt}regimes reported: $\square$~direct multilingual $\square$~Translate-Test $\square$~both (R4)\\[3pt]
+\emph{Corpus base rates (65 benchmarks, 2018--2025): translated 26.2\%; low-resource 6.2\%; universal 55.4\%; QA+syntax 49.2\%.}
+\end{minipage}}
+\caption{The five-axis taxonomy as a fill-in coverage card for new evaluation resources (R5 of the main paper). The ``if universal'' sub-item operationalizes the distinction between genuinely culture-independent content and stripped context (\S4.4 of the main paper); the ``both'' regimes box operationalizes R4.}
+\label{fig:card}
+\end{figure}
+
+\subsection{Worked Examples}
+Table~\ref{tab:filledcards} shows three completed cards, filled from the per-resource summaries above and the decision rules of Section~\ref{sec:criteria}; the released annotation file remains the authoritative label source. The three resources are deliberately contrasting: two multiple-choice QA benchmarks that agree on tier, task, and paradigm yet differ on exactly the two axes---origin and cultural specificity---that \S4.2 of the main paper shows move scores, plus a low-resource resource whose card is the rare one that would tick the R4 ``both'' box. BELEBELE and ArabicMMLU are identical on D2/D3/D5 and differ only on D1 and D4---precisely the axes on which GPT-4's natively sourced ArabicMMLU score (72.5\%) falls below its translated-Arabic-MMLU score. Task-and-language metadata alone cannot see this difference; the card can.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+ & \textbf{BELEBELE} & \textbf{ArabicMMLU} & \textbf{AmericasNLI} \\
+ & (2023) & (2024) & (2022) \\
+\midrule
+D1 & translated & native (exams, & translated \\
+ & (human, from & 8 countries) & (human, from \\
+ & FLORES-200) & & XNLI) \\
+D2 & high & high & low (10 Indigenous \\
+ & & & languages) \\
+D3 & QA & QA & NLU \\
+D4 & universal & cult.\ anchored & universal \\
+ & (inherited) & ($>$50\% Arabic- & (inherited) \\
+ & & specific) & \\
+D5 & retrieval; & retrieval; & retrieval; zero-shot \\
+ & direct & direct & 30--50\%; translate- \\
+ & & & based leads \\
+\bottomrule
+\end{tabular}
+\caption{Three coverage cards completed from the per-resource summaries in this supplement. Tier cells follow the designed-to-evaluate rule (\S1) and should be reconciled with the released annotation file at camera-ready.}
+\label{tab:filledcards}
+\end{table}
+
+\section{A Reporting Checklist for Multilingual Evaluation}
+\label{sec:checklist}
+The following checklist restates the main paper's recommendations R1--R5 in the yes/no/not-applicable format of venue reporting checklists (e.g., the ACL Responsible NLP Checklist and the AAAI Reproducibility Checklist), so the five axes can be adopted as submission-time reporting requirements. Each item carries the corpus statistic that motivates it. Items 1--9 address benchmark builders; item 10 addresses model developers and auditors.
+\begin{enumerate}\itemsep2pt\parskip0pt
+\item For each language subset, is it stated whether content was natively authored or translated, and by what method? \emph{[26.2\% of the 65 benchmarks are translation-built (\S4.2 of the main paper).]}
+\item If translated, are results reported on a native-source counterpart where one exists? \emph{[Native counterparts depress inflated scores: GPT-4 scores 72.5\% on natively sourced ArabicMMLU, below its translated-Arabic-MMLU score (\S4.2).]}
+\item Is the resource tier of the languages the benchmark is \emph{designed} to evaluate stated, distinguishing designed from incidental coverage? \emph{[Only 6.2\% of benchmarks center low-resource languages (\S4.1).]}
+\item Are per-language sample sizes and disaggregated results reported, not only a language-averaged score? \emph{[Drops of up to 24.3\% for low-resource languages vanish in averages (\S4.1).]}
+\item Are the task class and the deployment capability it proxies named? \emph{[QA and syntax absorb 49.2\% of benchmarks; long-context and embeddings have one benchmark each (\S4.3).]}
+\item Is it stated whether items presuppose cultural knowledge---and if ``universal,'' whether by design or by stripping context? \emph{[55.4\% of benchmarks are culturally non-specific; culturally sensitive subsets reorder leaderboards (\S4.4).]}
+\item Are both direct multilingual and Translate-Test performance reported, with the gap between them? \emph{[Translate-Test consistently outperforms direct inference in low-resource settings (\S4.6).]}
+\item Is the inference nature (retrieval-style vs.\ multi-hop) disclosed? \emph{[Multilingual long-context aggregation falls below 1\% accuracy on its hardest variant (\S4.6).]}
+\item Is the five-axis annotation released in machine-readable form with the resource?
+\item For model papers claiming multilingual capability: is the provenance mix---native/translated share, tier, and cultural grounding of the benchmarks behind the claim---disclosed? \emph{[A single ``multilingual'' aggregate can blend 48 native with 17 translated benchmarks (Table~1 of the main paper).]}
+\end{enumerate}
 
 \bibliography{aaai2027}
 
