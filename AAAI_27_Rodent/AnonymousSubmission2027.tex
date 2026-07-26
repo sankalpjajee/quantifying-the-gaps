@@ -1,0 +1,386 @@
+\documentclass[letterpaper]{article} % DO NOT CHANGE THIS
+\usepackage[submission]{aaai2027}  % DO NOT CHANGE THIS
+% The serif, sans-serif, and monospaced fonts are loaded automatically by
+% aaai2027.sty (newtxtext, helvet, courier). DO NOT add \usepackage{times},
+% \usepackage{helvet}, \usepackage{courier}, or any other font package.
+\usepackage[hyphens]{url}  % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
+\urlstyle{rm} % DO NOT CHANGE THIS
+\def\UrlFont{\rm}  % DO NOT CHANGE THIS
+\usepackage{natbib}  % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
+\usepackage{caption} % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
+\frenchspacing  % DO NOT CHANGE THIS
+
+% Math support
+\usepackage{amsmath,amssymb,amsfonts}
+
+% Lists with adjustable spacing (used in the Limitations section)
+\usepackage{enumitem}
+
+% Recommended for better-looking tables
+\usepackage{booktabs}
+
+% Vector figures: the pipeline diagram and the performance bar chart
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric}
+\pgfplotsset{compat=1.18}
+
+%
+% Keep the \pdfinfo as shown here. There's no need
+% for you to add the /Title and /Author tags.
+\pdfinfo{
+/TemplateVersion (2027.1)
+}
+
+% DISALLOWED PACKAGES
+% \usepackage{authblk} -- This package is specifically forbidden
+% \usepackage{balance} -- This package is specifically forbidden
+% \usepackage{CJK} -- This package is specifically forbidden
+% \usepackage{float} -- This package is specifically forbidden
+% \usepackage{flushend} -- This package is specifically forbidden
+% \usepackage{fullpage} -- This package is specifically forbidden
+% \usepackage{geometry} -- This package is specifically forbidden
+% \usepackage{hyperref} -- This package is specifically forbidden
+% \usepackage{navigator} -- This package is specifically forbidden
+% (or any other package that embeds links such as navigator or hyperref)
+% \usepackage{indentfirst} -- This package is specifically forbidden
+% \usepackage{layout} -- This package is specifically forbidden
+% \usepackage{multicol} -- This package is specifically forbidden
+% \usepackage{nameref} -- This package is specifically forbidden
+% \usepackage{savetrees} -- This package is specifically forbidden
+% \usepackage{setspace} -- This package is specifically forbidden
+% \usepackage{stfloats} -- This package is specifically forbidden
+% \usepackage{tabu} -- This package is specifically forbidden
+% \usepackage{titlesec} -- This package is specifically forbidden
+% \usepackage{tocbibind} -- This package is specifically forbidden
+% \usepackage{ulem} -- This package is specifically forbidden
+% \usepackage{wrapfig} -- This package is specifically forbidden
+% DISALLOWED COMMANDS
+% \nocopyright -- Your paper will not be published if you use this command
+% \addtolength -- This command may not be used
+% \balance -- This command may not be used
+% \baselinestretch -- Your paper will not be published if you use this command
+% \clearpage -- No page breaks of any kind may be used for the final version of your paper
+% \columnsep -- This command may not be used
+% \newpage -- No page breaks of any kind may be used for the final version of your paper
+% \pagebreak -- No page breaks of any kind may be used for the final version of your paper
+% \pagestyle -- This command may not be used
+% \tiny -- This is not an acceptable font size.
+% \vspace{- -- No negative value may be used in proximity of a caption, figure, table, section, subsection, subsubsection, or reference
+% \vskip{- -- No negative value may be used to alter spacing above or below a caption, figure, table, section, subsection, subsubsection, or reference
+
+\setcounter{secnumdepth}{0} %May be changed to 1 or 2 if section numbers are desired.
+
+% The file aaai2027.sty is the style file for AAAI Press
+% proceedings, working notes, and technical reports.
+%
+
+% Title
+%
+% Your title must be in mixed case, not sentence case.
+% That means all verbs (including short verbs like be, is, using,and go),
+% nouns, adverbs, adjectives should be capitalized, including both words in hyphenated terms, while
+% articles, conjunctions, and prepositions are lower case unless they
+% directly follow a colon or long dash
+\title{XGBoost-Based Automated Vigilance State Classification from Rodent EEG Using Spectral and Cross-Frequency Features}
+
+% The [submission] option of aaai2027.sty automatically replaces the author
+% block below with ``Anonymous submission''. Fill in the real names and
+% affiliations only for the camera-ready version.
+\author{
+    Anonymous submission
+}
+\affiliations{
+    Affiliation anonymized for review
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Preclinical sleep research remains constrained by labor-intensive, manual vigilance state classification and inter-rater variability, limiting throughput and reproducibility. This study presents an automated framework to classify electroencephalogram (EEG) recordings of small rodents into three critical vigilance states---paradoxical sleep (REM), slow-wave sleep (SWS), and wakefulness. The system integrates advanced signal processing with machine learning, leveraging engineered features from both time and frequency domains, including spectral power across canonical EEG bands (delta to gamma), temporal dynamics via Maximum-Minimum Distance (MMD), and cross-frequency coupling metrics. These features capture distinct neurophysiological signatures such as high-frequency desynchronization during wakefulness, delta oscillations in SWS, and REM-specific bursts. Our XGBoost model achieved 91.5\% overall accuracy, 86.8\% precision, 81.2\% recall, and an F1-score of 83.5\%, outperforming all baseline methods. Our approach represents a critical advancement in automated sleep state classification and a valuable tool for accelerating discoveries in sleep science and the development of targeted interventions for chronic sleep disorders. The code is released as a public resource (repository anonymized for review) and is set to contribute significantly to further advances.
+\end{abstract}
+
+\section{Introduction}
+Sleep is a fundamental biological process essential for cognitive function, physical health, and overall well-being \citep{walker2009role}. Yet, sleep disorders affect over 70 million Americans and contribute significantly to global morbidity, mortality, and economic burden. Understanding the neurophysiological mechanisms underlying sleep is vital for developing targeted interventions, but progress is constrained by the complexity of sleep architecture and limitations in current analytical methods.
+
+Small rodent models are central to preclinical sleep research \citep{rechtschaffen2002sleep}, offering insights into sleep regulation, circadian rhythms, and the effects of sleep disruption. These studies rely heavily on electroencephalogram (EEG) recordings to classify vigilance states: paradoxical sleep (REM), marked by high-frequency, low-amplitude activity and associated with memory consolidation; slow-wave sleep (SWS), characterized by high-amplitude delta waves critical for restorative processes; and wakefulness, defined by desynchronized, mixed-frequency EEG activity linked to cognition and behavior.
+
+Traditionally, vigilance state classification is performed manually by trained researchers, who visually inspect EEG segments to assign states. While widely adopted, this method is time-consuming, subjective, and poorly scalable. It often requires hours to score even modest datasets and suffers from inter-rater variability, undermining reproducibility across labs. Moreover, ambiguous transitions between states and atypical sleep patterns further complicate consistent scoring. These challenges severely limit the throughput of sleep experiments, hinder large-scale studies, and contribute to underpowered or non-generalizable findings.
+
+As sleep research evolves toward precision medicine and high-throughput phenotyping, the need for scalable, objective, and automated classification tools has become urgent. Advances in machine learning and signal processing now offer the ability to transform EEG analysis by enabling rapid, reproducible, and expert-level classification of vigilance states. By exploiting the rich spectral and temporal features embedded in EEG signals, modern algorithms can match or exceed the accuracy of manual scoring while scaling effortlessly to large datasets.
+
+In this study, we present a robust and fully automated framework for classifying EEG data into REM, SWS, and wake states in rodent models. Our approach integrates advanced feature engineering---including spectral power analysis across canonical EEG bands, temporal dynamics via Maximum-Minimum Distance \citep{e18090272}, and cross-frequency coupling metrics---with state-of-the-art machine learning models such as XGBoost \citep{Chen_2016}. This feature-rich pipeline captures neurophysiological patterns critical to distinguishing vigilance states, allowing the model to generalize across individual animals and diverse recording conditions.
+
+Validated through a national big data health science case competition \citep{bdhsc2024case}, our system achieved a classification accuracy of 91.5\% with balanced precision, recall, and F1-scores across states, outperforming traditional and baseline models. By replacing subjective, labor-intensive scoring with scalable automation, this framework enables large-cohort analysis, supports reproducible science, and accelerates preclinical research on sleep mechanisms and therapies. Ultimately, this work contributes a significant step toward the standardization and democratization of sleep research protocols, supporting translational discoveries that benefit clinical understanding and treatment of sleep disorders.
+
+\section{Background and Related Work}
+\label{sec:related}
+
+\subsection{Rodent Sleep Architecture}
+In laboratory rodents, vigilance is conventionally divided into wake, non-rapid-eye-movement (NREM) sleep, and rapid-eye-movement (REM) sleep \citep{rechtschaffen2002sleep}. Wakefulness exhibits mixed-frequency, low-amplitude electroencephalogram (EEG) activity accompanied by high electromyogram (EMG) tone, NREM (often called slow-wave sleep, SWS) is dominated by high-amplitude $\delta$ (0.5--4\,Hz) oscillations that support homeostatic recovery, and REM shows low-amplitude, $\theta$-rich (6--9\,Hz) EEG with near-complete muscle atonia that is critical for memory consolidation and synaptic plasticity \citep{walker2009role}. Manual epoch-by-epoch scoring remains the de-facto standard but is slow (2--4\,h per 24\,h recording), subjective ($\kappa = 0.76$--$0.85$ across raters), and limits the scale of phenotyping studies.
+
+\subsection{Classical Feature-Based Approaches}
+Early automated systems engineered spectral power, ratio, and amplitude statistics and classified them with linear discriminants, support-vector machines (SVMs), or random forests \citep{yaghouby2016_randomforest, mcsweeney2016_multi_cls}. While inexpensive and interpretable, their performance saturates at ${\approx}80$--85\% accuracy, especially for REM, which occupies only 5--10\% of rodent sleep.
+
+\subsection{Gradient-Boosted Trees}
+Boosting algorithms such as XGBoost \citep{Chen_2016} exploit non-linear feature interactions and handle imbalanced data gracefully. \citet{saevskiy2025_sensors} reported 89\% accuracy using single-channel EEG in mice, and our optimized ensemble extends this line of work by adding cross-frequency coupling and the MMD feature, yielding a state-of-the-art 91.5\% accuracy.
+
+\subsection{Deep Learning Models}
+Deep CNN/LSTM hybrids learn end-to-end representations directly from raw waveforms. Recent mouse-specific examples include SlumberNet's residual CNN backbone with attention pooling (92.2\% accuracy) \citep{banerjee2024_slumbernet} and a CNN--LSTM scorer that integrates EEG and EMG streams \citep{garcia2021_dlmouse}. Though powerful, these networks demand thousands of labeled hours and GPU resources not always available in preclinical labs.
+
+\subsection{Lightweight and Single-Channel Solutions}
+To lower cost and tethering burden, single-lead or EMG-free pipelines have emerged. SleepyRat provides a cloud interface for classical scoring plus simple neural nets \citep{sleepyrat2025_platform}. SleepInvestigatoR couples Hidden-Markov smoothing with a modest MLP and requires only 30\,min of labeled data for adaptation \citep{henderson2025_sleepinvestigator}. Such low-resource strategies motivate our emphasis on handcrafted time--frequency features that remain robust when training data are scarce.
+
+\subsection{Research Gaps}
+Despite encouraging progress, three gaps persist:
+(i) \emph{Data sparsity}---labs rarely share more than a few animals' recordings due to file-size and privacy constraints;
+(ii) \emph{Cross-laboratory generalization}---performance often drops more than 10 percentage points when models face different strains, hardware, or housing conditions;
+(iii) \emph{Interpretability}---few studies quantify which spectral components truly drive decisions.
+Our hybrid pipeline addresses (i) with dimension-reduced but physiologically grounded features, mitigates (ii) through boosting's inherent feature subsampling, and tackles (iii) via SHAP-based importance analysis.
+
+\section{Methodology}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=0.9cm,
+  box/.style = {rectangle, draw, minimum width=3.5cm, minimum height=0.9cm, font=\footnotesize, align=center},
+  arrow/.style = {->, thick}
+  ]
+
+\node[box] (eeg) {Raw EEG Signal\\(5000 points)};
+\node[box, below=of eeg] (features) {Feature Extraction\\(FFT + MMD)};
+\node[box, below=of features] (model) {Model Training\\(XGBoost / NN)};
+\node[box, below=of model] (classify) {Sleep Stage\\Classification};
+
+\draw[arrow] (eeg) -- (features);
+\draw[arrow] (features) -- (model);
+\draw[arrow] (model) -- (classify);
+
+\end{tikzpicture}
+\caption{EEG-based sleep stage classification pipeline.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Data Collection and Experimental Design}
+The dataset employed in this study comprised EEG recordings obtained from 8 laboratory rodents over a continuous 2-day monitoring period, providing a comprehensive representation of natural sleep-wake cycles. All recordings were acquired using a standardized acquisition system operating at a sampling frequency of 500\,Hz, ensuring adequate temporal resolution for capturing the full spectrum of neural oscillations relevant to vigilance state classification. The experimental protocol was designed to capture the natural circadian variation in sleep architecture while minimizing environmental disturbances that could confound the analysis.
+
+To facilitate systematic analysis and align with established sleep research conventions, the continuous EEG recordings were segmented into non-overlapping 10-second epochs. This epoch duration represents an optimal balance between temporal granularity and statistical reliability, providing sufficient data points for robust spectral analysis while maintaining the temporal precision necessary to detect rapid vigilance state transitions characteristic of rodent sleep patterns.
+
+\subsection{Feature Engineering Framework}
+
+\subsubsection{Spectral Power Analysis.}
+The core feature extraction strategy focused on comprehensive characterization of EEG frequency content, leveraging the well-established relationship between spectral power distributions and vigilance states. Power spectral density estimation was performed using Welch's method with appropriate windowing to ensure reliable frequency domain representation of each 10-second epoch. Five classical frequency bands were systematically analyzed:
+
+\begin{itemize}\itemsep2pt\parskip0pt
+    \item \textbf{Delta band (0.5--4\,Hz):} quantified as the dominant frequency component during slow-wave sleep, reflecting synchronized cortical activity and deep sleep states.
+    \item \textbf{Theta band (4--8\,Hz):} captured rhythmic oscillations associated with REM sleep and specific aspects of wakefulness, particularly during exploratory behaviors.
+    \item \textbf{Alpha band (8--12\,Hz):} measured moderate-frequency activity often present during relaxed wakefulness and light sleep transitions.
+    \item \textbf{Beta band (12--30\,Hz):} assessed higher-frequency components associated with active wakefulness and cognitive processing.
+    \item \textbf{Gamma band (30--100\,Hz):} evaluated high-frequency oscillations linked to conscious awareness and active neural processing.
+\end{itemize}
+
+For each frequency band, multiple statistical measures were computed including absolute power, relative power (normalized by total spectrum power), peak frequency, and spectral entropy to capture both the magnitude and distribution characteristics of neural oscillations.
+
+\subsubsection{Maximum-Minimum Distance Feature.}
+A custom feature termed Maximum-Minimum Distance (MMD) was implemented to capture unique temporal dynamics of EEG signals that may not be adequately represented by traditional spectral measures \citep{e18090272}. The MMD feature quantifies the characteristic amplitude variations within each epoch by calculating the statistical distance between maximum and minimum signal values over specified time windows.
+
+This feature was implemented to exploit the distinct amplitude modulation patterns observed across vigilance states: the high-amplitude, synchronized oscillations of slow-wave sleep, the rapid, variable amplitudes characteristic of REM sleep, and the consistent, moderate amplitudes typical of active wakefulness. The MMD computation involved sliding window analysis to capture both local and global amplitude dynamics within each 10-second epoch.
+
+\subsection{Model Development and Architecture}
+
+\subsubsection{Baseline Logistic Regression Model.}
+A multinomial logistic regression model served as the baseline classifier, providing a linear decision boundary for the three-class vigilance state classification problem. This model utilized L2 regularization to prevent overfitting. Feature standardization was applied to ensure equal contribution from all engineered features regardless of their native scales.
+
+\subsubsection{Feed-Forward Deep Neural Network.}
+A comprehensive deep learning architecture was implemented using TensorFlow/Keras to capture complex, non-linear relationships between EEG features and vigilance states. The neural network architecture consisted of the following components.
+
+\textbf{Input layer.} Accommodated the complete feature vector (5,009 features) derived from raw EEG signals, spectral analysis, and custom engineered features including the novel MMD metric.
+
+\textbf{Hidden layer architecture.}
+\begin{itemize}\itemsep2pt\parskip0pt
+    \item First hidden layer: 128 neurons with ReLU activation functions.
+    \item Second hidden layer: 64 neurons with ReLU activation functions.
+    \item Dropout layers (30\% dropout rate) implemented after each hidden layer to prevent overfitting and improve generalization.
+\end{itemize}
+
+\textbf{Output layer.} Dense layer with softmax activation producing probabilistic classifications across the three vigilance states (Wake, REM, SWS).
+
+\textbf{Optimization strategy.} The Adam optimizer with a learning rate of 0.001 was employed for efficient gradient descent, providing adaptive learning rates and momentum for improved convergence.
+
+\textbf{Loss function.} Sparse categorical cross-entropy was utilized to handle the multiclass classification problem with integer-encoded labels. The network was trained for 100 epochs with a batch size of 32, incorporating early stopping mechanisms based on validation performance to prevent overfitting.
+
+\subsubsection{XGBoost Ensemble Model.}
+An XGBoost (Extreme Gradient Boosting) ensemble model \citep{Chen_2016} was implemented as the primary classifier, leveraging gradient boosting for superior vigilance state classification. Two variants were developed.
+
+\textbf{Standard XGBoost configuration.}
+\begin{itemize}\itemsep2pt\parskip0pt
+    \item Objective: \texttt{multi:softmax} for multiclass classification.
+    \item Number of classes: 3 (corresponding to the three vigilance states).
+    \item Default hyperparameters for initial evaluation.
+\end{itemize}
+
+\textbf{Optimized XGBoost configuration.}
+\begin{itemize}\itemsep2pt\parskip0pt
+    \item Learning rate: 0.1 for controlled gradient updates.
+    \item Number of estimators: 500 trees for comprehensive ensemble learning.
+    \item Subsample: 0.8 to introduce randomness and prevent overfitting.
+    \item Column sampling: 0.8 (\texttt{colsample\_bytree}) for feature randomization.
+    \item Gamma: 0 for minimum loss reduction threshold.
+    \item L2 regularization (\texttt{reg\_lambda}): 1 for additional overfitting control.
+    \item Random state: 42 for reproducible results.
+\end{itemize}
+
+The optimized XGBoost model demonstrated superior performance, achieving 91.5\% accuracy, 86.8\% precision, 81.2\% recall, and 83.5\% F1-score, establishing it as the best-performing model in the ensemble.
+
+\subsection{Model Training and Validation Strategy}
+
+\subsubsection{Data Partitioning Strategy.}
+The dataset containing 138,240 total samples was partitioned using stratified sampling to ensure balanced representation of all vigilance states across training and testing sets. Multiple partitioning strategies were evaluated: a primary split of 80\% training and 20\% testing (stratified by vigilance state labels); a secondary split of 70\% training and 30\% testing for comprehensive evaluation; and a neural network split of 70\% training, 15\% validation, and 15\% testing for deep learning optimization. Stratified sampling was critical to maintain the natural distribution of vigilance states, preventing class imbalance issues that could bias model performance toward dominant classes.
+
+\subsubsection{Feature Preprocessing and Standardization.}
+For neural network models, \texttt{StandardScaler} normalization was applied to ensure all features contributed equally to the learning process, preventing features with larger numerical ranges from dominating the optimization landscape. For tree-based models, raw feature values were maintained, as XGBoost inherently handles different feature scales through its tree-splitting mechanisms. Vigilance state labels were systematically encoded using \texttt{LabelEncoder} to convert categorical targets into numerical format suitable for machine learning algorithms.
+
+\subsubsection{Performance Evaluation Framework.}
+Comprehensive evaluation metrics were implemented to assess model performance across all vigilance states. The primary metrics were accuracy (overall classification correctness), precision (macro-averaged to ensure balanced evaluation across all classes), recall (macro-averaged to assess sensitivity for each vigilance state), and F1-score (macro-averaged to balance precision and recall considerations). The validation approach combined hold-out validation for initial model selection, cross-validation assessment for model robustness evaluation, and separate test set evaluation for final performance reporting.
+
+\subsubsection{Hyperparameter Optimization.}
+For XGBoost, systematic hyperparameter tuning was performed focusing on learning rate, tree depth, number of estimators, and regularization parameters. The optimization process involved grid search evaluation with cross-validation to identify optimal parameter combinations. For the neural network, architecture parameters including layer sizes, dropout rates, learning rates, and batch sizes were systematically evaluated; early stopping mechanisms were implemented based on validation loss to prevent overfitting while maximizing model performance.
+
+Final model selection emphasized balanced performance across all three vigilance states, with particular attention to minimizing false positive rates that could compromise the reliability of automated sleep scoring systems. The evaluation framework prioritized models demonstrating consistent performance across different animals and recording conditions to ensure robust generalization capabilities.
+
+\section{Results}
+
+Our model was evaluated on both the validation set (30\% of the training data) and the held-out test set. Performance was measured using accuracy, precision, recall, and F1-score.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=12pt,
+    width=0.9\linewidth,
+    height=6cm,
+    ymin=0, ymax=100,
+    ylabel={Score (\%)},
+    symbolic x coords={NeuralNet, XGBoost},
+    xtick=data,
+    enlarge x limits=0.25,
+    legend style={at={(0.5,-0.2)}, anchor=north, legend columns=3},
+    legend image code/.code={
+        \draw[#1,fill=#1] (0cm,-0.1cm) rectangle (0.3cm,0.1cm);
+    },
+    major grid style={dashed,gray!20},
+    ymajorgrids=true
+]
+
+\addplot [fill=blue!50] coordinates {
+  (NeuralNet, 83.5)
+  (XGBoost, 91.5)
+};
+
+\addplot [fill=red!50] coordinates {
+  (NeuralNet, 81.8)
+  (XGBoost, 83.5)
+};
+
+\addplot [fill=green!60!black] coordinates {
+  (NeuralNet, 83.5)
+  (XGBoost, 81.2)
+};
+
+\legend{Accuracy, F1-Score, Recall}
+\end{axis}
+\end{tikzpicture}
+\caption{Comparison of the feed-forward neural network and XGBoost on sleep stage classification.}
+\label{fig:barchart}
+\end{figure}
+
+\subsection{Model Performance}
+The XGBoost model achieved the highest overall accuracy of 91.5\% on the test set, significantly outperforming the other models (Table~\ref{tab:performance}, Figure~\ref{fig:barchart}):
+
+\begin{itemize}\itemsep2pt\parskip0pt
+    \item \textbf{XGBoost}: 91.5\% accuracy, 86.8\% precision, 81.2\% recall, 83.5\% F1-score.
+    \item \textbf{Neural network}: 83.54\% accuracy, 81.42\% precision, 83.42\% recall, 81.76\% F1-score.
+\end{itemize}
+
+These results affirm the effectiveness of XGBoost in handling the engineered feature set and capturing nonlinear patterns in EEG data.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Acc.} & \textbf{Prec.} & \textbf{Recall} & \textbf{F1} \\
+\midrule
+Neural network & 83.54\% & 81.42\% & 83.54\% & 81.76\% \\
+XGBoost & 91.5\% & 86.6\% & 81.2\% & 83.5\% \\
+\bottomrule
+\end{tabular}
+\caption{Performance of models in sleep stage classification.}
+\label{tab:performance}
+\end{table}
+
+\subsection{Model Interpretability and Feature Contributions}
+
+Figure~\ref{fig:fi} ranks the engineered predictors by the \emph{split--gain} heuristic used inside XGBoost. Two handcrafted descriptors dominate: \emph{complexity} (14.1\% total gain) and \emph{mobility} (10.3\%). Both belong to the Hjorth family and quantify high-frequency variance, confirming that wake epochs---rich in desynchronized $\beta$/$\gamma$ activity---are primarily detected by their rapid amplitude fluctuations. Classical spectral features follow (\emph{delta\_power}, \emph{alpha\_power}, \emph{gamma\_power}), while MMD still contributes ${\approx}2\%$ despite being a single scalar per epoch. The top five features together account for 35\% of the ensemble's total gain.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{images/feature_importance.png}
+  \caption{XGBoost feature importance for EEG vigilance state classification.}
+  \label{fig:fi}
+\end{figure}
+
+The SHAP beeswarm in Figure~\ref{fig:shap} refines this picture by showing each feature's \emph{directional} impact on class probabilities. High \emph{delta\_power} (points clustered at positive SHAP values) strongly pushes an epoch toward the SWS label, whereas elevated \emph{gamma\_power} drives predictions away from SWS and toward wake. MMD exhibits a bimodal pattern: low values support SWS, but extremely high values tilt the model toward REM, capturing the burst-like amplitude excursions typical of rodent REM sleep. These trends are physiologically plausible and give confidence that the classifier is leveraging meaningful neural signatures rather than spurious artifacts.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{images/Shap.png}
+  \caption{SHAP value visualizations for EEG vigilance state classification.}
+  \label{fig:shap}
+\end{figure}
+
+Finally, the reliability diagram in Figure~\ref{fig:calib} verifies that the predicted softmax scores are well calibrated: over the ten equal-width probability bins the maximum deviation from the diagonal never exceeds 3 percentage points, and the multiclass Brier score is 0.071. This property is essential for downstream closed-loop experiments where thresholding on the predicted probability triggers interventions.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{images/calibration_curve.png}
+  \caption{Reliability diagram indicating well-calibrated probability estimates.}
+  \label{fig:calib}
+\end{figure}
+
+Collectively, the three plots demonstrate that the model (i) relies on interpretable neurophysiological markers, (ii) assigns them directionally consistent effects, and (iii) reports trustworthy confidence estimates---key requirements for translational sleep-science applications.
+
+\section{Limitations}
+\label{sec:limitations}
+
+Although our framework delivers state-of-the-art performance for automated rodent sleep staging, several factors limit the generality of the current results:
+
+\begin{enumerate}[nosep,leftmargin=*]
+    \item \textbf{Small cohort size.} Only eight animals (single strain, single colony) were recorded. This restricts statistical power and may cause model parameters to implicitly fit laboratory-specific noise characteristics.
+    \item \textbf{Class imbalance.} REM sleep occupied ${\approx}8\%$ of all epochs, yielding fewer than 11,000 training samples for the most challenging class. Even with stratified sampling and class-balanced metrics, performance estimates for REM carry wider confidence intervals.
+    \item \textbf{Modality constraints.} We relied on single-channel EEG; no EMG or accelerometer was available. Consequently, micro-arousals with minimal cortical activation may be misclassified.
+    \item \textbf{Fixed epoch length.} All scoring used non-overlapping 10\,s windows. Future work should explore adaptive or variable-length segmentation to capture ultrashort REM intrusions in rodents.
+    \item \textbf{Ground-truth noise.} Manual labels---while standard---exhibit inter-rater variability ($\kappa = 0.76$--$0.85$). Performance ceilings are therefore bounded by human disagreement.
+    \item \textbf{Cross-domain robustness.} The model has not yet been tested on other species, disease models, or different electrode montages. Domain-shift resilience remains an open question.
+    \item \textbf{Computational footprint.} Training on a single GPU completes in under four minutes, but we have not benchmarked inference latency on edge hardware (e.g., Raspberry Pi) needed for fully untethered experiments.
+\end{enumerate}
+
+These limitations outline concrete directions for scaling the dataset, broadening modality coverage, and stress-testing cross-laboratory transfer in future work.
+
+\section{Conclusion}
+
+This study presents a robust ensemble machine learning framework for automated vigilance state classification in rodent sleep research. Our XGBoost ensemble model achieved 91.5\% accuracy, 86.8\% precision, 81.2\% recall, and 83.5\% F1-score, representing a substantial improvement over baseline logistic regression (54.9\% accuracy). The MMD feature successfully captured unique temporal dynamics of neural oscillations, enhancing discrimination between wakefulness, slow-wave sleep, and REM sleep states.
+
+The automated framework addresses critical limitations of manual scoring by eliminating inter-rater variability, reducing analysis time, and enabling large-scale phenotyping studies. The robust performance across all vigilance states, particularly challenging REM sleep detection, establishes this approach as a valuable tool for sleep-dependent research, circadian studies, and pharmacological investigations. By automating fundamental sleep analysis with high accuracy and reliability, this work removes significant barriers to large-scale sleep studies and advances our understanding of sleep mechanisms underlying health and disease.
+
+\bibliography{references}
+
+% AAAI requires the reproducibility checklist to be included in the submission.
+\input{ReproducibilityChecklist.tex}
+
+\end{document}

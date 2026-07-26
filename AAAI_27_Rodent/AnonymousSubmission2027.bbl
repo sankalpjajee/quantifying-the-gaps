@@ -1,0 +1,74 @@
+\begin{thebibliography}{12}
+\providecommand{\natexlab}[1]{#1}
+
+\bibitem[{Aboalayon et~al.(2016)Aboalayon, Faezipour, Almuhammadi, and
+  Moslehpour}]{e18090272}
+Aboalayon, K. A.~I.; Faezipour, M.; Almuhammadi, W.~S.; and Moslehpour, S.
+  2016.
+\newblock Sleep Stage Classification Using {EEG} Signal Analysis: A
+  Comprehensive Survey and New Investigation.
+\newblock \emph{Entropy}, 18(9): 272.
+
+\bibitem[{{Anonymous Host Institution}(2024)}]{bdhsc2024case}
+{Anonymous Host Institution}. 2024.
+\newblock National Big Data Health Science Student Case Competition.
+\newblock Organizer details anonymized for review.
+
+\bibitem[{Banerjee et~al.(2024)}]{banerjee2024_slumbernet}
+Banerjee, S.; et~al. 2024.
+\newblock {SlumberNet}: Deep Learning Classification of Sleep Stages Using Raw
+  {EEG} and {EMG} in Mice.
+\newblock \emph{Scientific Reports}.
+
+\bibitem[{Chen and Guestrin(2016)}]{Chen_2016}
+Chen, T.; and Guestrin, C. 2016.
+\newblock {XGBoost}: A Scalable Tree Boosting System.
+\newblock In \emph{Proceedings of the 22nd ACM SIGKDD International Conference
+  on Knowledge Discovery and Data Mining}, KDD '16, 785--794. ACM.
+
+\bibitem[{Garc{\'\i}a et~al.(2021)}]{garcia2021_dlmouse}
+Garc{\'\i}a, F.; et~al. 2021.
+\newblock A Deep Learning Algorithm for Sleep Stage Scoring in Mice Based on
+  {CNN--LSTM}.
+\newblock \emph{Journal of Neuroscience Methods}.
+
+\bibitem[{Henderson et~al.(2025)}]{henderson2025_sleepinvestigator}
+Henderson, T.; et~al. 2025.
+\newblock {SleepInvestigatoR}: An {R} Toolkit for Rapid Analysis of Scored
+  Rodent Sleep.
+\newblock \emph{Sleep Advances}, 6(2): zpaf032.
+
+\bibitem[{McSweeney et~al.(2016)}]{mcsweeney2016_multi_cls}
+McSweeney, D.; et~al. 2016.
+\newblock Multiple Classifier Systems for Automatic Sleep Scoring in Mice.
+\newblock \emph{Sleep}.
+
+\bibitem[{Rechtschaffen and Bergmann(2002)}]{rechtschaffen2002sleep}
+Rechtschaffen, A.; and Bergmann, B.~M. 2002.
+\newblock Sleep Deprivation in the Rat: An Update of the 1989 Paper.
+\newblock \emph{Sleep}, 25(1): 18--24.
+
+\bibitem[{Saevskiy et~al.(2025)Saevskiy, Suntsova, Kosenko, Alam, and
+  Kostin}]{saevskiy2025_sensors}
+Saevskiy, A.; Suntsova, N.; Kosenko, P.; Alam, M.~N.; and Kostin, A. 2025.
+\newblock Open-Source Algorithm for Automated Vigilance State Classification
+  Using Single-Channel {EEG} in Rodents.
+\newblock \emph{Sensors}, 25(3): 921.
+
+\bibitem[{{SleepyRat}(2025)}]{sleepyrat2025_platform}
+{SleepyRat}. 2025.
+\newblock {SleepyRat}: A Free Web Platform for Automated Rodent Sleep Scoring.
+\newblock \url{https://sleepyrat.ai}.
+
+\bibitem[{Walker(2009)}]{walker2009role}
+Walker, M.~P. 2009.
+\newblock The Role of Sleep in Cognition and Emotion.
+\newblock \emph{Annals of the New York Academy of Sciences}, 1156: 168--197.
+
+\bibitem[{Yaghouby et~al.(2016)}]{yaghouby2016_randomforest}
+Yaghouby, F.; et~al. 2016.
+\newblock Automatic Sleep Scoring in Rodents Using Random Forest Classifiers.
+\newblock In \emph{Proceedings of the IEEE Engineering in Medicine and Biology
+  Society Conference (EMBC)}.
+
+\end{thebibliography}
