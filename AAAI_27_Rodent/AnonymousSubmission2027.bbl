@@ -1,4 +1,4 @@
-\begin{thebibliography}{12}
+\begin{thebibliography}{11}
 \providecommand{\natexlab}[1]{#1}
 
 \bibitem[{Aboalayon et~al.(2016)Aboalayon, Faezipour, Almuhammadi, and
@@ -11,14 +11,8 @@ Aboalayon, K. A.~I.; Faezipour, M.; Almuhammadi, W.~S.; and Moslehpour, S.
 
 \bibitem[{{Anonymous Host Institution}(2024)}]{bdhsc2024case}
 {Anonymous Host Institution}. 2024.
-\newblock National Big Data Health Science Student Case Competition.
+\newblock 5th National Big Data Health Science Student Case Competition.
 \newblock Organizer details anonymized for review.
-
-\bibitem[{Banerjee et~al.(2024)}]{banerjee2024_slumbernet}
-Banerjee, S.; et~al. 2024.
-\newblock {SlumberNet}: Deep Learning Classification of Sleep Stages Using Raw
-  {EEG} and {EMG} in Mice.
-\newblock \emph{Scientific Reports}.
 
 \bibitem[{Chen and Guestrin(2016)}]{Chen_2016}
 Chen, T.; and Guestrin, C. 2016.
@@ -26,17 +20,18 @@ Chen, T.; and Guestrin, C. 2016.
 \newblock In \emph{Proceedings of the 22nd ACM SIGKDD International Conference
   on Knowledge Discovery and Data Mining}, KDD '16, 785--794. ACM.
 
-\bibitem[{Garc{\'\i}a et~al.(2021)}]{garcia2021_dlmouse}
-Garc{\'\i}a, F.; et~al. 2021.
-\newblock A Deep Learning Algorithm for Sleep Stage Scoring in Mice Based on
-  {CNN--LSTM}.
-\newblock \emph{Journal of Neuroscience Methods}.
-
-\bibitem[{Henderson et~al.(2025)}]{henderson2025_sleepinvestigator}
-Henderson, T.; et~al. 2025.
-\newblock {SleepInvestigatoR}: An {R} Toolkit for Rapid Analysis of Scored
-  Rodent Sleep.
+\bibitem[{Gamble et~al.(2025)Gamble, Williams, McKenna, and
+  Logan}]{gamble2025_sleepinvestigator}
+Gamble, M.~C.; Williams, B.~R.; McKenna, J.~T.; and Logan, R.~W. 2025.
+\newblock {SleepInvestigatoR}: A Flexible {R} Function for Analyzing Scored
+  Sleep in Rodents.
 \newblock \emph{Sleep Advances}, 6(2): zpaf032.
+
+\bibitem[{Jha, Valekunja, and Reddy(2024)}]{jha2024_slumbernet}
+Jha, P.~K.; Valekunja, U.~K.; and Reddy, A.~B. 2024.
+\newblock {SlumberNet}: Deep Learning Classification of Sleep Stages Using
+  Residual Neural Networks.
+\newblock \emph{Scientific Reports}, 14: 4797.
 
 \bibitem[{McSweeney et~al.(2016)}]{mcsweeney2016_multi_cls}
 McSweeney, D.; et~al. 2016.

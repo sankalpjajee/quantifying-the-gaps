@@ -1,0 +1,1023 @@
+% =====================================================================
+% draft_evaluation.tex
+% Experimental Setup + evaluation scaffolding for
+%   AAAI_27_Rodent/AnonymousSubmission2027.tex
+%
+% Covers revision-plan items A5, A7, A8.2 (Experimental Setup budget),
+% and provides the empty result containers for Track B items
+% B1-B12.
+%
+% ---------------------------------------------------------------------
+% CONVENTION USED THROUGHOUT THIS FILE -- READ BEFORE EDITING
+% ---------------------------------------------------------------------
+% There is not one measured number in any table below. Every cell that
+% must receive a measurement renders as
+%       [R-E]
+% via the \REQEXP macro defined immediately below, and every table is
+% preceded by a block comment beginning
+%       % REQUIRES_EXPERIMENT:
+% that names exactly what must be run to fill it.
+%
+% Do not "temporarily" put a plausible number in a [R-E] cell to see how
+% the table looks. A placeholder that reads like a result is the single
+% most damaging thing that can happen to this manuscript. If you need to
+% check the layout, put 00.0 in EVERY cell of the table at once so that
+% no partially-filled version can ever escape.
+%
+% The four numbers already in the frozen abstract -- 91.5 / 86.8 / 81.2 /
+% 83.5 -- appear in exactly one place in this file (the protocol-ladder
+% table, P1 row) and are labelled there as the figures produced by the
+% originally submitted configuration. They are not repeated elsewhere.
+%
+% ---------------------------------------------------------------------
+% PAGE BUDGET
+% ---------------------------------------------------------------------
+% Compiled standalone against the AAAI-27 template this file occupies
+% roughly 4.5 columns: ~1.5 for Experimental Setup and ~3 for the eight
+% tables and their surrounding prose. The revision plan (A8.2) budgets
+% 0.70 pg for Experimental Setup and 1.60 pg for Results.
+% It therefore OVERRUNS as written, deliberately -- it is a superset, and
+% the cut order is given in the block comment that opens the results
+% scaffolding below. Cut tables, not the honesty paragraph in the
+% protocol subsection.
+%
+% ---------------------------------------------------------------------
+% PACKAGE / PREAMBLE REQUIREMENTS
+% ---------------------------------------------------------------------
+% This file needs only booktabs and amsmath, both already loaded by the
+% manuscript preamble. It requires NO new packages.
+% The \REQEXP definition must be moved to the preamble (or kept here, but
+% it must appear exactly once in the merged document -- if another draft
+% file defines it too, delete one copy).
+% ---------------------------------------------------------------------
+
+\newcommand{\REQEXP}{\texttt{[R-E]}}
+
+% =====================================================================
+% NOTE ON PLACEMENT
+% The revision plan (A8.2) gives Experimental Setup its own section with
+% a 0.70-page budget, split out of the current Methodology. That is what
+% is written below. If the authors prefer to keep a single Methodology
+% section, demote \section -> \subsection and each \subsection ->
+% \subsubsection throughout; nothing else changes.
+% =====================================================================
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{Cohort and Provenance}
+\label{subsec:cohort}
+
+% REQUIRES_EXPERIMENT: none of this is an experiment -- every blank below
+% is a fact the authors already hold and must transcribe. It is flagged
+% the same way because writing a guess would be fabrication either way.
+% Needed: species (the manuscript never says mouse or rat, while
+% comparing itself against mouse- and rat-specific published figures),
+% strain, sex, age at recording, housing and light cycle, electrode
+% montage and reference scheme, acquisition hardware, animal-use protocol
+% and approving body, and the licence under which the recordings may be
+% redistributed.
+Recordings were obtained from eight
+% REQUIRES_EXPERIMENT: species and strain
+laboratory rodents monitored continuously for two days, digitized at
+$f_s = 500$\,Hz from a single EEG channel and segmented into
+non-overlapping $10$\,s epochs, giving $138{,}240$ epochs in total.
+% REQUIRES_EXPERIMENT: per-animal epoch counts. Note that the cohort
+% total is exactly 8 x 48 h at 10 s resolution, which is consistent with
+% no epoch having been excluded from any recording. If artifact rejection
+% was in fact applied, the counts will not be uniform and the total will
+% not be 138,240 -- state which is the case.
+Per-animal epoch counts are given in Table~\ref{tab:classdist}.
+No electromyogram, accelerometer, or video channel was available, so
+every result reported here is obtained from cortical EEG alone; this
+distinguishes the present setting from scorers that consume paired
+EEG and EMG \citep{jha2024_slumbernet, wang2023_intellisleepscorer}
+and it bounds what any of the reported figures can be compared against.
+
+\subsection{Reference Standard}
+\label{subsec:labels}
+
+% REQUIRES_EXPERIMENT: label provenance. The manuscript cites a human
+% inter-rater kappa of 0.76-0.85 twice but never states how its own
+% ground truth was produced, which means the reported accuracy is
+% currently measured against an unspecified target. Needed: number of
+% scorers, their training, the scoring criteria and epoch length used,
+% whether any recording was double-scored, the observed agreement on the
+% double-scored subset, and how disagreements were resolved.
+Vigilance-state labels were assigned by
+% REQUIRES_EXPERIMENT: number and qualification of scorers
+expert scorers following
+% REQUIRES_EXPERIMENT: scoring criteria and any published standard followed
+established criteria. Because manual scoring of rodent EEG is itself
+subject to inter-rater disagreement in the range $\kappa = 0.76$--$0.85$,
+agreement with this reference standard is bounded above by the
+reliability of the standard itself. We therefore report Cohen's $\kappa$
+against the label set alongside accuracy: $\kappa$ is the only quantity
+we compute that is on the same scale as the published inter-rater
+figures, and it is the appropriate one to compare against them.
+
+\subsection{Evaluation Protocols}
+\label{subsec:protocols}
+
+Because the epochs in this dataset are neither independent of one another
+nor exchangeable across animals, the choice of partition determines what
+a reported figure means. We therefore define three protocols and report
+every headline metric under each. They differ only in the unit that is
+held out; the feature pipeline, hyperparameters, and random seed are
+identical throughout.
+
+\begin{itemize}\itemsep2pt\parskip0pt
+    \item \textbf{P1 (epoch-wise).} All $138{,}240$ epochs are pooled
+    across animals and partitioned at random, stratified by vigilance
+    state, into $80\%$ training and $20\%$ test. This is the protocol
+    under which the figures originally reported for this system were
+    produced.
+    \item \textbf{P2 (contiguous-block, within-animal).} Each recording
+    is divided into contiguous blocks of
+    % REQUIRES_EXPERIMENT: fix and state the block unit -- whole hours,
+    % or whole light/dark phases. Whole light/dark phases are preferable
+    % because they also break the circadian confound; whole hours give
+    % more folds. Pick one and use it everywhere.
+    fixed duration, and whole blocks are assigned to training or test.
+    Every animal still contributes to both partitions, but no test epoch
+    is temporally adjacent to a training epoch.
+    \item \textbf{P3 (leave-one-animal-out).} Eight folds, each holding
+    out all epochs of one animal. No epoch from a test animal, and no
+    epoch recorded in the same session as a test epoch, is seen during
+    training or model selection.
+\end{itemize}
+
+\paragraph{What P1 establishes, and what it does not.}
+Under P1 every animal contributes epochs to both partitions, and because
+the recordings are continuous and the epochs are consecutive, the
+immediate temporal neighbours of almost every test epoch---drawn from the
+same sleep bout, the same electrode, the same session, and the same
+animal---are in the training set. P1 therefore measures how well the
+classifier interpolates within recordings it has already partly seen.
+That quantity is not meaningless: it is the operating point of the common
+laboratory workflow in which a scorer is fitted on manually scored
+segments of a cohort's recordings and applied to the remainder of those
+same recordings. But it is not a measure of transfer to an unseen animal,
+an unseen session, or an unseen laboratory, and we do not present it as
+one. Figures obtained under P1 are not comparable to figures published
+for scorers evaluated on held-out animals or held-out datasets, and every
+comparison in this paper that crosses that line is marked as such.
+P3 is the protocol that supports subject-independent claims; P2 separates
+the contribution of temporal adjacency from the contribution of subject
+identity. We report all three because the difference between them is
+itself the measurement, and we report it whichever direction it goes.
+
+% NOTE TO THE AUTHORS: the paragraph above is deliberately flat. Do not
+% add a mitigating clause ("nevertheless", "it should be noted that the
+% split is standard in this literature", "we argue that"). The value of
+% this paragraph to a reviewer is entirely in its refusal to argue. The
+% fact that the epoch-wise split is common in this application literature
+% belongs in Related Work, stated about other people's papers, not here
+% as a defence of this one.
+
+\subsection{Metrics}
+\label{subsec:metrics}
+
+Let $\mathcal{Y} = \{\textsc{wake}, \textsc{sws}, \textsc{rem}\}$, let
+$y_i$ and $\hat{y}_i$ denote the reference and predicted state of test
+epoch $i$, and let $n$ be the number of test epochs. For a state
+$c \in \mathcal{Y}$ write $\mathrm{TP}_c$, $\mathrm{FP}_c$, and
+$\mathrm{FN}_c$ for the one-vs-rest counts. We report
+\begin{align}
+\mathrm{Pre}_c &= \frac{\mathrm{TP}_c}{\mathrm{TP}_c + \mathrm{FP}_c},
+\qquad
+\mathrm{Rec}_c = \frac{\mathrm{TP}_c}{\mathrm{TP}_c + \mathrm{FN}_c},
+\label{eq:prerec}\\
+\mathrm{F1}_c &= \frac{2\,\mathrm{Pre}_c\,\mathrm{Rec}_c}
+                      {\mathrm{Pre}_c + \mathrm{Rec}_c},
+\label{eq:f1}
+\end{align}
+and their unweighted means over the three states, which we label
+\emph{macro} throughout. Accuracy is
+$\frac{1}{n}\sum_i \mathbf{1}[\hat{y}_i = y_i]$. Balanced accuracy is the
+unweighted mean of the per-state recalls and is therefore numerically
+identical to macro recall in this three-class setting; we report it once,
+under the macro-recall heading, rather than twice under two names.
+Chance-corrected agreement is Cohen's
+\begin{equation}
+\kappa = \frac{p_o - p_e}{1 - p_e},
+\label{eq:kappa}
+\end{equation}
+with $p_o$ the observed agreement and $p_e$ the agreement expected from
+the marginal distributions.
+
+% NOTE TO THE AUTHORS: this next sentence exists to close the numeric
+% inconsistency identified in the manuscript (Track A item A7): the
+% network row currently reports accuracy = recall = 83.54%, which is the
+% signature of a WEIGHTED recall reported against a MACRO recall for
+% XGBoost. Every metric in every table must be recomputed under one
+% stated convention before any of these tables is filled.
+Unless a table states otherwise, every precision, recall, and F1 figure
+in this paper is macro-averaged, computed with the same convention for
+every model and every protocol.
+
+For probabilistic evaluation we report the multiclass Brier score
+\begin{equation}
+\mathrm{BS} = \frac{1}{n}\sum_{i=1}^{n}\sum_{c \in \mathcal{Y}}
+              \bigl(\hat{p}_{ic} - \mathbf{1}[y_i = c]\bigr)^2,
+\label{eq:brier}
+\end{equation}
+which under this convention lies in $[0,2]$, and the expected calibration
+error over $M$ equal-width bins $B_1,\dots,B_M$ of the predicted
+probability,
+\begin{equation}
+\mathrm{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{n}
+               \bigl|\operatorname{acc}(B_m) - \operatorname{conf}(B_m)\bigr|,
+\label{eq:ece}
+\end{equation}
+together with the maximum calibration error
+$\mathrm{MCE} = \max_m |\operatorname{acc}(B_m) - \operatorname{conf}(B_m)|$.
+% REQUIRES_EXPERIMENT: state M, and state whether the reliability
+% analysis is one-vs-rest per class or top-label. The reliability diagram
+% currently in the manuscript shows approximately 20 bins at 0.05
+% spacing, while the text says ten -- resolve this from the plotting
+% code, not from the image.
+Reliability curves are computed
+% REQUIRES_EXPERIMENT: one-vs-rest or top-label; number of bins
+over equal-width bins of the predicted probability.
+
+\subsection{Baselines}
+\label{subsec:baselines}
+
+We compare against four references, chosen so that at least one is
+external to this work.
+\begin{itemize}\itemsep2pt\parskip0pt
+    \item \textbf{Majority-class predictor.} Predicts the most frequent
+    state for every epoch. This fixes the floor: on a three-class problem
+    with a strongly skewed prior, accuracy alone is uninformative without
+    it.
+    \item \textbf{Multinomial logistic regression.} $L_2$-regularized,
+    fitted on the same design matrix, the same partition, and the same
+    standardization as every other model.
+    % REQUIRES_EXPERIMENT: regularization strength, solver, maximum
+    % iterations, and whether the solver converged. The manuscript's
+    % Conclusion reports 54.9% for this model and reports it nowhere
+    % else; 54.9% on a three-class problem whose majority class alone
+    % plausibly exceeds 50% is close to the trivial rate, and a published
+    % logistic-regression baseline on a comparable task reaches 93.3%
+    % \citep{wang2023_intellisleepscorer}. Either the figure is
+    % reproducible and explicable, or the claim must be deleted.
+    \item \textbf{Feed-forward network.} The two-layer network described
+    in the Method section, retrained on the \emph{identical} feature
+    vector supplied to the boosted ensemble.
+    % REQUIRES_EXPERIMENT: the manuscript's network consumed 5,009
+    % columns. If the boosted ensemble consumed a different column set,
+    % the existing comparison measures inputs rather than models. Retrain
+    % both on one matrix or reframe the comparison explicitly as
+    % engineered-features-versus-raw-samples.
+    \item \textbf{SAGER \citep{saevskiy2025_sensors}.} An open-source
+    single-channel rodent scorer combining artifact processing,
+    multi-band spectral analysis, and Gaussian-mixture clustering. It is
+    the only published rodent scorer we are aware of that is both openly
+    available and applicable to EEG without EMG; the widely used
+    AccuSleep \citep{barger2019_accusleep} and IntelliSleepScorer
+    \citep{wang2023_intellisleepscorer} both require an EMG channel that
+    this cohort does not have. We run SAGER on these eight recordings
+    under the same protocols and score it against the same labels.
+    % REQUIRES_EXPERIMENT: run SAGER (github.com/sykesva/SAGER) on this
+    % cohort. Report NO comparison number that was not produced by
+    % actually running the method on this data. If integration fails,
+    % say so explicitly and report no number at all -- an honest
+    % "we could not run it, for these reasons" is publishable; a number
+    % transcribed from SAGER's own paper and placed in a table of results
+    % on this cohort is not.
+\end{itemize}
+
+\subsection{Model Selection and Hyperparameters}
+\label{subsec:hparams}
+
+% REQUIRES_EXPERIMENT: the grid actually searched. Needed: each parameter
+% name, the exact list of values tried, the resulting number of
+% configurations, the number of cross-validation folds, THE UNIT ON WHICH
+% FOLDS WERE ASSIGNED (epochs or animals), and the selection criterion.
+% Reproducibility-checklist item 4.1 asks for precisely this. If the
+% search folds were assigned over pooled epochs, that must be stated,
+% because it means the selected hyperparameters saw every animal.
+Hyperparameters were selected by grid search over
+% REQUIRES_EXPERIMENT: parameter names, value lists, configuration count
+a fixed grid, with folds assigned over
+% REQUIRES_EXPERIMENT: epochs or animals
+and configurations ranked by
+% REQUIRES_EXPERIMENT: selection criterion
+on the validation folds. The selected configuration uses a learning rate
+of $0.1$, $500$ estimators, subsample $0.8$, \texttt{colsample\_bytree}
+$0.8$, $\gamma = 0$, $\lambda = 1$, and seed $42$.
+% REQUIRES_EXPERIMENT: max_depth is named in the tuning description but
+% its selected value is never given; also missing are objective,
+% tree_method, min_child_weight, and eval_metric.
+The same configuration is used unchanged under P1, P2, and P3, so that
+the differences between protocols reflect the partition and nothing else.
+
+% NOTE TO THE AUTHORS -- this is a correctness bug, not a presentation
+% issue. The manuscript specifies objective = multi:softmax, which
+% returns hard class labels. A reliability diagram, an ECE, and a Brier
+% score cannot be computed from hard labels. Either the reported
+% objective is wrong and the fitted model actually used multi:softprob,
+% or the calibration analysis was computed from a different model than
+% the one described. State which, and make the reported objective match
+% the model that produced the calibration figure.
+Class probabilities required for the calibration analysis are obtained
+from
+% REQUIRES_EXPERIMENT: state the objective actually used
+the multiclass probabilistic objective. No class reweighting or
+resampling was applied at any stage; stratification preserves the
+population class proportions in each partition by construction and does
+not correct for them.
+% NOTE: the manuscript currently claims stratification prevented "class
+% imbalance issues". It does the opposite -- it guarantees the imbalance
+% is reproduced in the test set. The sentence above replaces that claim.
+Feature standardization for the models that require it was fitted on the
+training partition only and applied unchanged to the test partition.
+% REQUIRES_EXPERIMENT: confirm from the code that the scaler was not
+% fitted on the full dataset. If it was, that is an additional leakage
+% path affecting the network row and must be stated.
+
+\subsection{Compute}
+\label{subsec:compute}
+
+% REQUIRES_EXPERIMENT: hardware (CPU model, GPU model, RAM), operating
+% system, and versions of xgboost, scikit-learn, numpy, scipy, and
+% TensorFlow. Also: wall-clock time for one fit, for the full P3 sweep,
+% and for feature extraction over the whole cohort.
+A single fit of the selected configuration completes in under four
+minutes on
+% REQUIRES_EXPERIMENT: hardware
+a single GPU. Per-epoch inference latency and throughput are reported in
+Table~\ref{tab:compute}, measured on
+% REQUIRES_EXPERIMENT: CPU and edge-device specifications
+both a workstation CPU and an embedded-class device, since untethered
+closed-loop use is the setting in which a compact ensemble has an
+advantage over a deep network.
+
+
+% #####################################################################
+% #####################################################################
+%  RESULTS SCAFFOLDING
+%
+%  Everything from here down belongs in the Results section. The tables
+%  are ordered by the priority given in the revision plan: cheapest and
+%  highest-value first. If the page budget binds, cut from the BOTTOM of
+%  this list, in this order:
+%     1st to go: Table~\ref{tab:context}   (external context -- optional)
+%     2nd to go: Table~\ref{tab:compute}   (edge benchmark -- optional)
+%     3rd to go: Table~\ref{tab:calib}     (fold into prose)
+%     4th to go: Table~\ref{tab:confusion} (fold into tab:perclass)
+%  Do NOT cut tab:perclass, tab:ladder, tab:loao, tab:ablation, or
+%  tab:baselines. Each of those answers a question a reviewer will ask
+%  in writing.
+% #####################################################################
+% #####################################################################
+
+
+% =====================================================================
+% TABLE: class distribution
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocol E2 in EXPERIMENTS.md):
+%   Count epochs by (animal, vigilance state) over the whole cohort.
+%   No model, no training -- a groupby on the label file. ~10 minutes.
+%   Fill: 24 count cells, 3 column totals, 3 percentages, 8 row totals.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Animal} & \textbf{Wake} & \textbf{SWS} & \textbf{REM} & \textbf{Total} \\
+\midrule
+A1 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A2 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A3 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A4 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A5 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A6 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A7 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A8 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\midrule
+Cohort & \REQEXP & \REQEXP & \REQEXP & 138{,}240 \\
+Share  & \REQEXP & \REQEXP & \REQEXP & 100\% \\
+\bottomrule
+\end{tabular}
+\caption{Epoch counts by animal and vigilance state. Cells marked
+\REQEXP\ are unmeasured slots, not results. The cohort row fixes the
+class prior against which every accuracy figure in this paper must be
+read, and the per-animal rows fix how much that prior varies across the
+folds of the leave-one-animal-out protocol.}
+\label{tab:classdist}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:classdist -- states what the table is for, asserts no result
+% ---------------------------------------------------------------------
+Table~\ref{tab:classdist} gives the composition of the cohort. It is
+reported before any performance figure because the three states are not
+equally represented: REM occupies a small minority of epochs, so overall
+accuracy is dominated by the two majority states and the majority-class
+floor in Table~\ref{tab:baselines} is the reference point against which
+any accuracy figure must be read. The per-animal rows additionally
+determine how far the class prior varies between the folds of P3, which
+bears directly on the spread reported in Table~\ref{tab:loao}.
+
+
+% =====================================================================
+% TABLE: per-class metrics
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocol E1 in EXPERIMENTS.md):
+%   Recompute from saved test-set predictions. NO retraining is needed if
+%   predictions were saved; if they were not, one refit of the selected
+%   configuration (~4 min) regenerates them.
+%   Fill: 3 states x 4 columns, the two average rows, accuracy, kappa.
+%   Produce one instance of this table per protocol (P1, P2, P3), or add
+%   a protocol column and merge.
+%
+% CONSISTENCY CHECK, to be done the moment this table is filled:
+%   Under P1 and the originally submitted configuration, the macro row
+%   must reproduce 86.8 / 81.2 / 83.5 and accuracy must be 91.5%. Those
+%   are the figures in the frozen abstract. If they do not reproduce,
+%   the discrepancy must be found and explained BEFORE anything else is
+%   written -- do not adjust the table to match the abstract.
+%   If a corrected configuration (e.g. with the subject-identity column
+%   removed) produces different values, report BOTH, label each by
+%   configuration, and state the relationship in one sentence. Do not
+%   silently replace one with the other.
+% =====================================================================
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{State} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Support} \\
+\midrule
+Wake & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+SWS  & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+REM  & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\midrule
+Macro avg.    & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+Weighted avg. & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\midrule
+Accuracy         & \multicolumn{4}{l}{\REQEXP} \\
+Cohen's $\kappa$ & \multicolumn{4}{l}{\REQEXP} \\
+\bottomrule
+\end{tabular}
+\caption{Per-state performance under
+% REQUIRES_EXPERIMENT: name the protocol this instance reports (P1, P2,
+% or P3) and the configuration (with or without the subject-identity
+% column). One table per protocol, or add a protocol column.
+protocol~[P\,?]. Cells marked \REQEXP\ are unmeasured slots, not results.
+Balanced accuracy equals the macro recall entry and is not listed
+separately. All averages are computed under the single convention stated
+in the Metrics description.}
+\label{tab:perclass}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:perclass
+% ---------------------------------------------------------------------
+Table~\ref{tab:perclass} decomposes the aggregate figures by state. The
+decomposition is reported because every substantive claim about this task
+concerns the minority state: macro averages over three states, one of
+which is rare and two of which are easy, can move substantially without
+the rare state moving at all, and a reader cannot recover the per-state
+behaviour from the aggregates. Cohen's $\kappa$ is included in the same
+table because it is the only metric here that is directly comparable to
+the inter-rater agreement figures reported for human scorers of rodent
+EEG, and it is therefore the appropriate quantity for judging whether an
+automated scorer is operating within the reliability of the standard it
+is measured against.
+
+% NOTE TO THE AUTHORS: once this table is filled, the following two
+% sentences elsewhere in the manuscript must be rewritten to match it,
+% not the other way round:
+%   - Introduction: "with balanced precision, recall, and F1-scores
+%     across states"
+%   - Conclusion:   "The robust performance across all vigilance states,
+%     particularly challenging REM sleep detection, establishes..."
+% Both are claims about the contents of this table, asserted before the
+% table existed. Delete them now and rewrite from the measured values.
+
+
+% =====================================================================
+% TABLE: confusion matrix
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocol E1 in EXPERIMENTS.md):
+%   sklearn.metrics.confusion_matrix on the same saved predictions used
+%   for tab:perclass. Rows are the reference standard, columns the
+%   prediction. Report raw counts, not row-normalized percentages -- the
+%   counts are what let a reader recompute every other figure in this
+%   paper, and a normalized matrix hides the support of the rare state.
+%   ~5 minutes once E1 has run.
+% =====================================================================
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{3}{c}{\textbf{Predicted}} & \\
+\cmidrule(lr){2-4}
+\textbf{Reference} & Wake & SWS & REM & \textbf{Support} \\
+\midrule
+Wake & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+SWS  & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+REM  & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\bottomrule
+\end{tabular}
+\caption{Confusion matrix under
+% REQUIRES_EXPERIMENT: name the protocol and configuration
+protocol~[P\,?], in raw epoch counts. Rows are the manual reference
+standard, columns the model prediction; diagonal entries are correct
+classifications. Cells marked \REQEXP\ are unmeasured slots, not results.}
+\label{tab:confusion}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:confusion
+% ---------------------------------------------------------------------
+Table~\ref{tab:confusion} reports the full error structure in raw counts.
+It is included because the direction of the errors, not their number,
+determines whether an automated scorer is usable for a given experiment:
+a scorer that confuses REM with SWS and one that confuses REM with wake
+have the same macro F1 but different consequences for a study of sleep
+architecture, and neither is visible in an aggregate score. Raw counts
+are given rather than row-normalized rates so that every other figure in
+this paper can be recomputed from this table.
+
+
+% =====================================================================
+% TABLE: protocol ladder
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocols E1, E5, E6 in EXPERIMENTS.md):
+%   Fill P2 from the contiguous-block split and P3 from the mean over the
+%   eight leave-one-animal-out folds (mean +/- sd across folds).
+%   The P1 row is the only row in this file that carries measured values,
+%   and they are the figures already reported for the originally
+%   submitted configuration.
+%
+%   IF THE P3 ROW COMES BACK BELOW THE P1 ROW -- which is the expected
+%   outcome -- do not bury it, do not average the protocols together, and
+%   do not report only the best fold. See EXPERIMENTS.md, experiment E6,
+%   "If the result is unfavourable". The gap between these rows is the
+%   most transferable finding this paper can report.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+& \textbf{Held-out unit} & \textbf{Acc.} & \textbf{Macro-F1} & $\kappa$ & \textbf{REM rec.} \\
+\midrule
+P1 & Random epochs   & 91.5\% & 83.5\% & \REQEXP & \REQEXP \\
+P2 & Time blocks     & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+P3 & Whole animals   & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\bottomrule
+\end{tabular}
+\caption{The same model and hyperparameters evaluated under three
+partitions of increasing strictness. The P1 accuracy and F1 entries are
+the figures obtained by the originally submitted configuration; every
+other cell is an unmeasured slot marked \REQEXP. P3 entries are means
+over the eight folds of Table~\ref{tab:loao}. Differences between rows
+are attributable to the partition alone, since nothing else changes.}
+\label{tab:ladder}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:ladder
+% ---------------------------------------------------------------------
+Table~\ref{tab:ladder} places the three protocols side by side. Its
+purpose is to separate three quantities that a single accuracy figure
+conflates: how well the classifier interpolates between temporally
+adjacent epochs (P1 against P2), how much of its performance depends on
+having seen the test animal during training (P2 against P3), and what
+remains when neither source of information is available (P3 alone). Only
+the last of these supports a claim about a new animal. We report the
+whole ladder rather than the most favourable rung because the size of the
+drop, if there is one, is the quantity a laboratory needs in order to
+decide whether a scorer trained on its own cohort will work on the next
+one.
+
+
+% =====================================================================
+% TABLE: leave-one-animal-out
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocol E6 in EXPERIMENTS.md):
+%   GroupKFold(n_splits=8) grouped on the animal identifier. Identical
+%   feature pipeline, identical hyperparameters, identical seed. Fit
+%   eight times. Fill 8 x 5 = 40 fold cells plus the mean and sd rows.
+%   Estimated compute: 8 x (one fit) ~= 35 min at the paper's stated
+%   sub-four-minute fit time; budget half a day including the plumbing.
+%
+%   The subject-identity column MUST be removed before this is run.
+%   Under P3 the held-out animal's identifier never appears in training,
+%   so the model has no fitted behaviour for it; leaving the column in
+%   makes the fold result uninterpretable rather than merely pessimistic.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Held out} & $n_{\text{test}}$ & \textbf{Acc.} & \textbf{Macro-F1} & $\kappa$ & \textbf{REM rec.} \\
+\midrule
+A1 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A2 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A3 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A4 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A5 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A6 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A7 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+A8 & \REQEXP & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\midrule
+Mean & --- & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+SD   & --- & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+Min  & --- & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\bottomrule
+\end{tabular}
+\caption{Leave-one-animal-out cross-validation (protocol P3). Each row
+holds out every epoch of one animal; the model is refitted from scratch
+on the remaining seven with unchanged hyperparameters. Cells marked
+\REQEXP\ are unmeasured slots, not results. The spread across folds, not
+the mean alone, is what characterises this estimator on a cohort of
+eight; the worst fold is reported for that reason.}
+\label{tab:loao}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:loao
+% ---------------------------------------------------------------------
+Table~\ref{tab:loao} reports each fold of the leave-one-animal-out
+protocol separately rather than only their mean. With eight animals the
+mean is an average of eight highly variable quantities, and the spread
+between folds carries information the mean discards: it indicates how
+much of the estimate depends on which animals happen to be in the
+training set, and it is the closest thing this cohort can offer to an
+estimate of what would happen on a ninth animal. The minimum row is
+included because a laboratory adopting an automated scorer needs the
+worst case it is likely to encounter, not the average case. Per-fold
+variation in the class prior, given in Table~\ref{tab:classdist}, should
+be read alongside these rows.
+
+% NOTE TO THE AUTHORS: eight paired folds is also what makes a
+% significance test possible at all. A Wilcoxon signed-rank test over
+% these eight folds is the only place in this paper where the word
+% "significantly" can be used honestly; it must not be used anywhere
+% else until that test has been run. See EXPERIMENTS.md, experiment E10.
+
+
+% =====================================================================
+% TABLE: feature-family ablation
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocol E9 in EXPERIMENTS.md):
+%   Two blocks. Cumulative addition establishes what each family adds on
+%   top of the previous ones; leave-one-family-out establishes what each
+%   family contributes in the presence of all the others. Both are needed
+%   because the families are strongly collinear -- Hjorth parameters are
+%   functions of spectral moments, and an amplitude-range statistic
+%   correlates with delta power -- so a family can look essential in one
+%   block and redundant in the other. That divergence is itself a result
+%   worth reporting.
+%   Run every variant under P3 on all eight folds with >= 5 seeds and
+%   report mean +/- sd. Estimated compute: 8 variants x 8 folds x 5 seeds
+%   = 320 fits; at the paper's stated sub-four-minute fit time that is
+%   roughly 21 h of compute. Budget one day wall clock.
+%
+%   THE CFC ROWS PRESUPPOSE THAT A CROSS-FREQUENCY COUPLING FEATURE
+%   EXISTS IN THE CODE. If it does not, these two rows must be deleted
+%   rather than filled, and the discrepancy with the title and the frozen
+%   abstract handled separately. Do not construct a coupling feature
+%   after the fact and present it as the one the abstract described.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Feature set} & $d$ & \textbf{Acc.} & \textbf{Macro-F1} & \textbf{REM rec.} \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Cumulative addition}}\\
+Spectral only        & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\quad + Hjorth       & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\quad + MMD          & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\quad + CFC (full)   & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\addlinespace
+\multicolumn{5}{@{}l}{\emph{Leave-one-family-out from the full set}}\\
+Full $-$ Spectral    & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+Full $-$ Hjorth      & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+Full $-$ MMD         & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+Full $-$ CFC         & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\bottomrule
+\end{tabular}
+\caption{Feature-family ablation under protocol P3, mean over the eight
+folds and over
+% REQUIRES_EXPERIMENT: number of seeds
+seeds. $d$ is the dimensionality of the design matrix for that variant.
+Cells marked \REQEXP\ are unmeasured slots, not results. The two blocks
+answer different questions and need not agree: the upper block measures
+what a family adds when little else is present, the lower what it adds
+when everything else is present.}
+\label{tab:ablation}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:ablation
+% ---------------------------------------------------------------------
+Table~\ref{tab:ablation} removes each feature family and refits. This is
+reported in addition to the attribution analysis because the two measure
+different things. A gain-based importance score is a property of one
+fitted model and is known to distribute credit arbitrarily among
+correlated predictors, and the families used here are correlated by
+construction: the Hjorth descriptors are functions of the second and
+fourth spectral moments and therefore covary with the band powers, and an
+amplitude-range statistic covaries with low-frequency power. An ablation
+answers the question the attribution analysis cannot---whether the model
+can do without a family---and it is the only evidence in this paper that
+bears on whether any individual descriptor is doing work.
+
+% NOTE TO THE AUTHORS: the manuscript's Conclusion currently asserts that
+% "The MMD feature successfully captured unique temporal dynamics of
+% neural oscillations, enhancing discrimination between..." That is a
+% claim about the "Full - MMD" row of this table, made before the row
+% existed. Delete it now. When the row is measured, write whatever it
+% says. A negative result on MMD is entirely publishable -- the frozen
+% abstract lists MMD as a feature that was used, which remains true
+% whatever the ablation shows -- and it is far less damaging than a
+% reviewer inferring that the feature was never tested.
+
+
+% =====================================================================
+% TABLE: baseline comparison
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocols E7, E11 in EXPERIMENTS.md):
+%   Every row must be measured on THESE eight recordings against THESE
+%   labels under the stated protocol. No row may be transcribed from
+%   another paper -- external figures belong in tab:context, which is
+%   explicitly labelled as not comparable.
+%   The majority-class row follows from tab:classdist alone.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Method} & \textbf{Acc.} & \textbf{Mac.-F1} & $\kappa$ & \textbf{REM rec.} \\
+\midrule
+Majority class            & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+Logistic regression       & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+Feed-forward network      & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+SAGER$^{\dagger}$         & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\addlinespace
+XGBoost (this work)       & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\quad + temporal smooth.  & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\bottomrule
+\end{tabular}
+\caption{Baseline comparison, all methods evaluated on the same eight
+recordings against the same reference labels under protocol
+% REQUIRES_EXPERIMENT: name the protocol; produce one instance per
+% protocol or add a protocol column
+[P\,?]. Cells marked \REQEXP\ are unmeasured slots, not results.
+$^{\dagger}$SAGER \citep{saevskiy2025_sensors} is an external, published,
+open-source single-channel rodent scorer and is the only row not
+implemented by us. No figure in this table is taken from another
+publication; figures reported elsewhere on other cohorts are listed
+separately in Table~\ref{tab:context} and are not comparable to these.}
+\label{tab:baselines}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:baselines
+% ---------------------------------------------------------------------
+Table~\ref{tab:baselines} compares the proposed classifier against a
+trivial floor, two in-house alternatives, and one external published
+system. The majority-class row is included because accuracy on a
+three-class problem with the prior of Table~\ref{tab:classdist} is
+uninterpretable without it. The external comparison matters more than the
+in-house ones: a comparison against models written by the same authors
+measures implementation choices as much as method, whereas SAGER
+\citep{saevskiy2025_sensors} is an independently developed,
+independently published, openly available scorer for exactly this
+setting---single-channel rodent EEG without EMG---and running it on these
+recordings is the only way to obtain a comparison that is not internal to
+this work. Systems requiring a paired EMG channel, including AccuSleep
+\citep{barger2019_accusleep} and IntelliSleepScorer
+\citep{wang2023_intellisleepscorer}, cannot be evaluated on this cohort
+at all, and we make no claim relative to them.
+
+
+% =====================================================================
+% TABLE: calibration  -- OPTIONAL, cut third if space binds
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocol E8 in EXPERIMENTS.md):
+%   Reliability analysis, ECE, MCE, and Brier score under each protocol,
+%   and per class. Requires a probabilistic objective; see the note in
+%   the hyperparameter description above.
+%   Calibration is the property most likely to degrade under subject
+%   shift, which is exactly why it must be measured under P3 and not only
+%   under P1. If it holds under P3, that is the strongest result this
+%   paper can report. If it does not, report the degradation -- a
+%   measured statement that confidence scores are unreliable under
+%   subject shift is a useful finding and is the honest version of the
+%   closed-loop argument.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Protocol} & \textbf{ECE} & \textbf{MCE} & \textbf{Brier} & \textbf{Worst class} \\
+\midrule
+P1 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+P2 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+P3 & \REQEXP & \REQEXP & \REQEXP & \REQEXP \\
+\bottomrule
+\end{tabular}
+\caption{Calibration of the predicted class probabilities under each
+protocol, computed as defined in
+Eqs.~(\ref{eq:brier})--(\ref{eq:ece}). ``Worst class'' names the state
+with the largest one-vs-rest deviation from the diagonal. Cells marked
+\REQEXP\ are unmeasured slots, not results.}
+\label{tab:calib}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:calib
+% ---------------------------------------------------------------------
+Table~\ref{tab:calib} reports calibration under each protocol. It is
+separated from the accuracy tables because the two properties can move
+independently, and because calibration is the quantity that closed-loop
+protocols actually depend on: an experiment that triggers a stimulus when
+the predicted probability of REM exceeds a threshold is governed by
+whether that probability means what it says, not by the model's accuracy
+at its own arg-max. Calibration is also the property most exposed to
+subject shift, which is why it is reported under P3 and not only under
+P1.
+
+% NOTE TO THE AUTHORS: the manuscript currently states that "the maximum
+% deviation from the diagonal never exceeds 3 percentage points." The
+% reliability diagram printed directly beneath that sentence does not
+% support it. Delete the sentence now, before this table is filled, and
+% write the replacement from the arrays that produced the plot -- not
+% from the plot. Also relabel the figure legend from Class 0/1/2 to
+% Wake/SWS/REM and state the LabelEncoder mapping, so that a reader can
+% tell whether the poorly calibrated class is the minority one.
+
+
+% =====================================================================
+% TABLE: compute -- OPTIONAL, cut second if space binds
+% =====================================================================
+% REQUIRES_EXPERIMENT (protocol E13 in EXPERIMENTS.md):
+%   Feature-extraction and inference throughput on a workstation CPU and
+%   on an embedded-class device. Batch and single-epoch latency both, and
+%   include feature extraction -- for this pipeline it is likely to
+%   dominate inference, and reporting tree-traversal time alone would
+%   overstate the deployability advantage.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Device} & \textbf{Feat.\ extr.} & \textbf{Inference} & \textbf{Total / epoch} \\
+\midrule
+Workstation CPU & \REQEXP & \REQEXP & \REQEXP \\
+Embedded device & \REQEXP & \REQEXP & \REQEXP \\
+\bottomrule
+\end{tabular}
+\caption{Per-epoch processing time, feature extraction and model
+inference reported separately. Cells marked \REQEXP\ are unmeasured
+slots, not results. Real-time operation on $10$\,s epochs requires the
+total to remain below $10$\,s per epoch by a margin.}
+\label{tab:compute}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:compute
+% ---------------------------------------------------------------------
+Table~\ref{tab:compute} reports the cost of scoring one epoch end to end.
+Feature extraction and inference are separated because they scale
+differently and because, for a pipeline built on a few hundred shallow
+trees over a low-dimensional descriptor, the spectral transform is likely
+to dominate; a figure that counted only tree traversal would overstate
+what the pipeline can do on constrained hardware. The relevant threshold
+is set by the epoch length: untethered closed-loop use requires the total
+to stay below the duration of the epoch being scored.
+
+
+% =====================================================================
+% TABLE: external context -- OPTIONAL, CUT FIRST if space binds
+% =====================================================================
+% !!! READ THIS BEFORE TOUCHING THE TABLE BELOW !!!
+%
+% This is the ONLY table in this file containing measured numbers, and
+% NONE of them was measured on this cohort. Each is a figure reported by
+% the cited authors on their own data, under their own protocol, with
+% their own labels and in some cases their own species and signal set.
+% They are NOT comparable to anything in tab:baselines and the caption
+% says so.
+%
+% Provenance of each figure, for re-verification before submission:
+%   IntelliSleepScorer 95.2% acc / kappa 0.91  -- Wang et al., Sci Rep
+%     13, 2023, doi 10.1038/s41598-023-31288-2. EEG+EMG, mice.
+%   SlumberNet 97% acc / 96% F1 -- Jha, Valekunja & Reddy, Sci Rep 14:4797,
+%     2024, doi 10.1038/s41598-024-54727-0. EEG+EMG, mice.
+%   Smith et al. mean F1 87.6% -- NPP Digital Psychiatry & Neuroscience,
+%     2025, doi 10.1038/s44277-025-00035-y. Single-channel EEG, rats.
+%   SAGER 92% (rats) / 93% (mice) -- Saevskiy et al., Sensors 25(3):921,
+%     2025, doi 10.3390/s25030921. NOTE: these are SLEEP-WAKE detection
+%     accuracies, not three-state accuracies. Do not present them as
+%     three-state accuracy.
+%
+% ACTION REQUIRED: open each publisher record and confirm each figure
+% before this table appears in a submitted PDF. Six of the seven domain
+% citations originally in this manuscript were wrong; one more bad
+% number here is unrecoverable.
+%
+% If in doubt, DELETE THIS TABLE. It is context, not evidence, and the
+% same content can be carried in one Related Work sentence per system.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{System} & \textbf{Signals} & \textbf{Reported} \\
+\midrule
+IntelliSleepScorer \citep{wang2023_intellisleepscorer} & EEG+EMG & 95.2\% acc.$^{\ddagger}$ \\
+SlumberNet \citep{jha2024_slumbernet}                  & EEG+EMG & 97\% acc.$^{\ddagger}$ \\
+\citet{smith2025_ratlstm}                              & EEG     & 87.6\% F1$^{\ddagger}$ \\
+SAGER \citep{saevskiy2025_sensors}                     & EEG     & 92--93\% acc.$^{\ddagger\S}$ \\
+\bottomrule
+\end{tabular}
+\caption{Figures reported by other authors for other rodent scorers.
+$^{\ddagger}$Measured by the cited authors on their own cohorts, under
+their own protocols and against their own reference labels; these are
+\emph{not} comparable to Table~\ref{tab:baselines} and no claim in this
+paper is made relative to them. $^{\S}$Sleep--wake detection accuracy,
+not three-state accuracy. The table is included to indicate where this
+application area currently sits, not to position this work within it.}
+\label{tab:context}
+\end{table}
+
+% ---------------------------------------------------------------------
+% PROSE FOR tab:context
+% ---------------------------------------------------------------------
+Table~\ref{tab:context} lists figures published for other rodent scorers.
+It is included as context for the reader and not as a comparison: the
+entries differ from this work and from each other in species, in signal
+set, in cohort size, in evaluation protocol, and in the reference
+standard used, and no pair of numbers in the table was produced under
+conditions that would make their difference interpretable. The only
+comparison in this paper that controls those factors is
+Table~\ref{tab:baselines}, in which every method is run on the same
+recordings against the same labels.
+
+% =====================================================================
+% END OF FILE
+%
+% BIBLIOGRAPHY DEPENDENCY. This file cites the following keys. Those
+% marked (new) do not exist in the current references.bib and must be
+% added; the verified entries are in the revision plan (item A1) and in
+% new_refs.bib, except barger2019_accusleep which is given below.
+%
+%   Chen_2016                    -- present
+%   saevskiy2025_sensors         -- present (verify the title: the bib
+%                                   abbreviates "Electroencephalogram"
+%                                   to EEG; the published title spells
+%                                   it out)
+%   e18090272                    -- present
+%   wang2023_intellisleepscorer  -- (new) revision plan A1.7
+%   jha2024_slumbernet           -- (new) revision plan A1.2
+%   smith2025_ratlstm            -- (new) revision plan A1.4
+%   barger2019_accusleep         -- (new) entry below
+%
+% Verified this session against the AccuSleep repository README and the
+% PLOS ONE record:
+%
+% @article{barger2019_accusleep,
+%   author  = {Barger, Zeke and Frye, Charles G. and Liu, Danqian and
+%              Dan, Yang and Bouchard, Kristofer E.},
+%   title   = {Robust, Automated Sleep Scoring by a Compact Neural
+%              Network with Distributional Shift Correction},
+%   journal = {PLOS ONE},
+%   volume  = {14},
+%   number  = {12},
+%   pages   = {e0224642},
+%   year    = {2019},
+%   doi     = {10.1371/journal.pone.0224642}
+% }
+%
+% NOT CITED HERE, deliberately: no citation is made for the claim that
+% no published rodent scorer reports probability calibration. If that
+% claim is used anywhere in the paper it must first be checked against
+% each cited system individually. It is a strong negative claim and it
+% must survive one search by one reviewer.
+% =====================================================================

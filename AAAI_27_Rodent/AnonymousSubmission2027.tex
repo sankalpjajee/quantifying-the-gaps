@@ -114,10 +114,9 @@ As sleep research evolves toward precision medicine and high-throughput phenotyp
 
 In this study, we present a robust and fully automated framework for classifying EEG data into REM, SWS, and wake states in rodent models. Our approach integrates advanced feature engineering---including spectral power analysis across canonical EEG bands, temporal dynamics via Maximum-Minimum Distance \citep{e18090272}, and cross-frequency coupling metrics---with state-of-the-art machine learning models such as XGBoost \citep{Chen_2016}. This feature-rich pipeline captures neurophysiological patterns critical to distinguishing vigilance states, allowing the model to generalize across individual animals and diverse recording conditions.
 
-Validated through a national big data health science case competition \citep{bdhsc2024case}, our system achieved a classification accuracy of 91.5\% with balanced precision, recall, and F1-scores across states, outperforming traditional and baseline models. By replacing subjective, labor-intensive scoring with scalable automation, this framework enables large-cohort analysis, supports reproducible science, and accelerates preclinical research on sleep mechanisms and therapies. Ultimately, this work contributes a significant step toward the standardization and democratization of sleep research protocols, supporting translational discoveries that benefit clinical understanding and treatment of sleep disorders.
+Validated through a 2024 national big data health science case competition \citep{bdhsc2024case}, our system achieved a classification accuracy of 91.5\% with macro-averaged precision, recall, and F1-scores of 86.8\%, 81.2\%, and 83.5\%, outperforming the baselines we evaluated. % REQUIRES_EXPERIMENT: per-class metrics are not yet reported; the gap between accuracy and macro recall indicates the minority REM class is scored substantially below the majority states. By replacing subjective, labor-intensive scoring with scalable automation, this framework enables large-cohort analysis, supports reproducible science, and accelerates preclinical research on sleep mechanisms and therapies. Ultimately, this work contributes a significant step toward the standardization and democratization of sleep research protocols, supporting translational discoveries that benefit clinical understanding and treatment of sleep disorders.
 
 \section{Background and Related Work}
-\label{sec:related}
 
 \subsection{Rodent Sleep Architecture}
 In laboratory rodents, vigilance is conventionally divided into wake, non-rapid-eye-movement (NREM) sleep, and rapid-eye-movement (REM) sleep \citep{rechtschaffen2002sleep}. Wakefulness exhibits mixed-frequency, low-amplitude electroencephalogram (EEG) activity accompanied by high electromyogram (EMG) tone, NREM (often called slow-wave sleep, SWS) is dominated by high-amplitude $\delta$ (0.5--4\,Hz) oscillations that support homeostatic recovery, and REM shows low-amplitude, $\theta$-rich (6--9\,Hz) EEG with near-complete muscle atonia that is critical for memory consolidation and synaptic plasticity \citep{walker2009role}. Manual epoch-by-epoch scoring remains the de-facto standard but is slow (2--4\,h per 24\,h recording), subjective ($\kappa = 0.76$--$0.85$ across raters), and limits the scale of phenotyping studies.
@@ -126,13 +125,13 @@ In laboratory rodents, vigilance is conventionally divided into wake, non-rapid-
 Early automated systems engineered spectral power, ratio, and amplitude statistics and classified them with linear discriminants, support-vector machines (SVMs), or random forests \citep{yaghouby2016_randomforest, mcsweeney2016_multi_cls}. While inexpensive and interpretable, their performance saturates at ${\approx}80$--85\% accuracy, especially for REM, which occupies only 5--10\% of rodent sleep.
 
 \subsection{Gradient-Boosted Trees}
-Boosting algorithms such as XGBoost \citep{Chen_2016} exploit non-linear feature interactions and handle imbalanced data gracefully. \citet{saevskiy2025_sensors} reported 89\% accuracy using single-channel EEG in mice, and our optimized ensemble extends this line of work by adding cross-frequency coupling and the MMD feature, yielding a state-of-the-art 91.5\% accuracy.
+Boosting algorithms such as XGBoost \citep{Chen_2016} exploit non-linear feature interactions and handle imbalanced data gracefully. \citet{saevskiy2025_sensors} reported 89\% accuracy using single-channel EEG in mice. Our ensemble extends this line of work with additional time-domain descriptors, including the MMD feature, reaching 91.5\% accuracy under the evaluation protocol described below. We note that higher accuracies have been reported by EMG-assisted deep models \citep{jha2024_slumbernet}; our contribution is not a new accuracy record but a compact, interpretable, calibrated feature basis for the single-channel EEG setting.
 
 \subsection{Deep Learning Models}
-Deep CNN/LSTM hybrids learn end-to-end representations directly from raw waveforms. Recent mouse-specific examples include SlumberNet's residual CNN backbone with attention pooling (92.2\% accuracy) \citep{banerjee2024_slumbernet} and a CNN--LSTM scorer that integrates EEG and EMG streams \citep{garcia2021_dlmouse}. Though powerful, these networks demand thousands of labeled hours and GPU resources not always available in preclinical labs.
+Deep networks learn end-to-end representations directly from raw waveforms. The strongest mouse-specific example is SlumberNet, a residual network (ResNet) over paired EEG and EMG that reports 97\% accuracy and a 96\% F1-score across baseline, sleep-deprivation, and recovery conditions \citep{jha2024_slumbernet}. Though powerful, such networks demand paired EMG, substantial labeled data, and GPU resources not always available in preclinical labs.
 
 \subsection{Lightweight and Single-Channel Solutions}
-To lower cost and tethering burden, single-lead or EMG-free pipelines have emerged. SleepyRat provides a cloud interface for classical scoring plus simple neural nets \citep{sleepyrat2025_platform}. SleepInvestigatoR couples Hidden-Markov smoothing with a modest MLP and requires only 30\,min of labeled data for adaptation \citep{henderson2025_sleepinvestigator}. Such low-resource strategies motivate our emphasis on handcrafted time--frequency features that remain robust when training data are scarce.
+To lower cost and tethering burden, single-lead or EMG-free pipelines have emerged. SleepyRat provides a cloud interface for classical scoring plus simple neural nets \citep{sleepyrat2025_platform}. Downstream of scoring, SleepInvestigatoR standardizes the analysis of \emph{already-scored} rodent sleep files, computing 23 architecture measures from a single configurable R function \citep{gamble2025_sleepinvestigator}; it is complementary to, not competitive with, an automated scorer, and it illustrates how much of the field's tooling still presupposes that scoring has already happened. Such low-resource strategies motivate our emphasis on handcrafted time--frequency features that remain robust when training data are scarce.
 
 \subsection{Research Gaps}
 Despite encouraging progress, three gaps persist:
@@ -166,7 +165,7 @@ Our hybrid pipeline addresses (i) with dimension-reduced but physiologically gro
 \end{figure}
 
 \subsection{Data Collection and Experimental Design}
-The dataset employed in this study comprised EEG recordings obtained from 8 laboratory rodents over a continuous 2-day monitoring period, providing a comprehensive representation of natural sleep-wake cycles. All recordings were acquired using a standardized acquisition system operating at a sampling frequency of 500\,Hz, ensuring adequate temporal resolution for capturing the full spectrum of neural oscillations relevant to vigilance state classification. The experimental protocol was designed to capture the natural circadian variation in sleep architecture while minimizing environmental disturbances that could confound the analysis.
+Figure~\ref{fig:pipeline} summarizes the end-to-end pipeline. The dataset employed in this study comprised EEG recordings obtained from 8 laboratory rodents over a continuous 2-day monitoring period, providing a comprehensive representation of natural sleep-wake cycles. All recordings were acquired using a standardized acquisition system operating at a sampling frequency of 500\,Hz, ensuring adequate temporal resolution for capturing the full spectrum of neural oscillations relevant to vigilance state classification. The experimental protocol was designed to capture the natural circadian variation in sleep architecture while minimizing environmental disturbances that could confound the analysis.
 
 To facilitate systematic analysis and align with established sleep research conventions, the continuous EEG recordings were segmented into non-overlapping 10-second epochs. This epoch duration represents an optimal balance between temporal granularity and statistical reliability, providing sufficient data points for robust spectral analysis while maintaining the temporal precision necessary to detect rapid vigilance state transitions characteristic of rodent sleep patterns.
 
@@ -254,7 +253,7 @@ Final model selection emphasized balanced performance across all three vigilance
 
 \section{Results}
 
-Our model was evaluated on both the validation set (30\% of the training data) and the held-out test set. Performance was measured using accuracy, precision, recall, and F1-score.
+Our model was evaluated on both the validation set (30\% of the training data) and the test set provided in the competition. Performance was measured using accuracy, precision, recall, and F1-score.
 
 \begin{figure}[t]
 \centering
@@ -295,7 +294,7 @@ Our model was evaluated on both the validation set (30\% of the training data) a
 \legend{Accuracy, F1-Score, Recall}
 \end{axis}
 \end{tikzpicture}
-\caption{Comparison of the feed-forward neural network and XGBoost on sleep stage classification.}
+\caption{Comparison of the feed-forward neural network (NeuralNet) and XGBoost on sleep stage classification.}
 \label{fig:barchart}
 \end{figure}
 
@@ -356,7 +355,6 @@ Finally, the reliability diagram in Figure~\ref{fig:calib} verifies that the pre
 Collectively, the three plots demonstrate that the model (i) relies on interpretable neurophysiological markers, (ii) assigns them directionally consistent effects, and (iii) reports trustworthy confidence estimates---key requirements for translational sleep-science applications.
 
 \section{Limitations}
-\label{sec:limitations}
 
 Although our framework delivers state-of-the-art performance for automated rodent sleep staging, several factors limit the generality of the current results:
 
@@ -376,7 +374,8 @@ These limitations outline concrete directions for scaling the dataset, broadenin
 
 This study presents a robust ensemble machine learning framework for automated vigilance state classification in rodent sleep research. Our XGBoost ensemble model achieved 91.5\% accuracy, 86.8\% precision, 81.2\% recall, and 83.5\% F1-score, representing a substantial improvement over baseline logistic regression (54.9\% accuracy). The MMD feature successfully captured unique temporal dynamics of neural oscillations, enhancing discrimination between wakefulness, slow-wave sleep, and REM sleep states.
 
-The automated framework addresses critical limitations of manual scoring by eliminating inter-rater variability, reducing analysis time, and enabling large-scale phenotyping studies. The robust performance across all vigilance states, particularly challenging REM sleep detection, establishes this approach as a valuable tool for sleep-dependent research, circadian studies, and pharmacological investigations. By automating fundamental sleep analysis with high accuracy and reliability, this work removes significant barriers to large-scale sleep studies and advances our understanding of sleep mechanisms underlying health and disease.
+The automated framework addresses critical limitations of manual scoring by eliminating inter-rater variability, reducing analysis time, and enabling large-scale phenotyping studies. The margin between overall accuracy and macro-averaged recall indicates that performance is not uniform across states, and per-class reporting is required before the method is relied upon for REM-specific analyses. % REQUIRES_EXPERIMENT: emit per-class precision/recall/F1, a confusion matrix, and Cohen's kappa.
+Subject to that caveat, the approach is a promising tool for sleep-dependent research, circadian studies, and pharmacological investigations. By automating fundamental sleep analysis with high accuracy and reliability, this work removes significant barriers to large-scale sleep studies and advances our understanding of sleep mechanisms underlying health and disease.
 
 \bibliography{references}
 

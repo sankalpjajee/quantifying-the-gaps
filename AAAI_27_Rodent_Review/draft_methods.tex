@@ -1,0 +1,473 @@
+% =====================================================================
+% DRAFT: METHODS FORMALIZATION
+% Target: AAAI_27_Rodent/AnonymousSubmission2027.tex
+% Replaces: "Feature Engineering Framework" (lines 173--191) and adds
+%           a feature table and an algorithm box.
+% Revision-plan items: A6.3 (Welch), A6.4 (MMD), A6.5 (Hjorth),
+%           A6.6 (feature table), A6.7 (algorithm box), plus the CFC
+%           slot demanded by section 6.1 / prerequisite P1.
+%
+% TRACK: this file is TRACK A (writing only, zero new experiments) with
+% the single exception noted in the CFC subsection, which is Track B if
+% and only if no coupling quantity is currently computed.
+%
+% ---------------------------------------------------------------------
+% !! TWO PREAMBLE LINES ARE REQUIRED AND ARE NOT PRESENT YET !!
+%
+% The algorithm box below needs these two lines added to the preamble of
+% AnonymousSubmission2027.tex, immediately after \frenchspacing:
+%
+%     \usepackage{algorithm}
+%     \usepackage{algorithmic}
+%
+% They are NOT on the AAAI-27 forbidden list, they are the packages the
+% AAAI author kit itself recommends for algorithms, and the companion
+% paper at AAAI_27/AnonymousSubmission2027.tex already loads exactly
+% these two (its preamble comment reads "These are recommended to typeset
+% algorithms but not required"). Both .sty files are present in the local
+% TeX Live installation. Nothing else new is required: everything below
+% uses amsmath, amssymb, booktabs and natbib, all already loaded.
+%
+% If the authors decide not to add those two packages, delete the
+% algorithm float and nothing else in this file breaks.
+% ---------------------------------------------------------------------
+%
+% NEW BIB KEYS USED HERE (all in new_refs.bib, all verified):
+%   hjorth1970, welch1967, tort2010, canolty2010
+% EXISTING BIB KEYS USED HERE:
+%   e18090272 (Aboalayon et al.), Chen_2016
+%
+% CONVENTION USED THROUGHOUT THIS FILE:
+%   Any quantity that is not already stated in the manuscript is left as
+%   a symbol and flagged with a
+%       % REQUIRES_EXPERIMENT: <what to run / read from the code>
+%   comment on the preceding line. There are no placeholder numbers.
+%   Most of these are not experiments in the usual sense -- they are
+%   values that must be transcribed from the feature-extraction code.
+%   They are flagged the same way because writing a guess would be
+%   fabrication either way.
+% =====================================================================
+
+
+\subsection{Notation}
+\label{subsec:notation}
+
+% NOTE TO THE AUTHORS: if the separate "Problem setting" paragraph from
+% item A6.1 of the revision plan is also adopted, merge it with this
+% paragraph rather than keeping both -- they define the same symbols.
+Let $r$ denote a continuous single-channel EEG recording sampled at
+$f_s = 500$\,Hz. We segment $r$ into non-overlapping epochs of duration
+$T = 10$\,s, so that each epoch is a vector
+$x = (x_1,\dots,x_N) \in \mathbb{R}^{N}$ with $N = T f_s = 5000$ samples.
+A feature map $\phi : \mathbb{R}^{N} \to \mathbb{R}^{d}$ produces the
+descriptor vector defined in this section, and a classifier
+$f : \mathbb{R}^{d} \to \Delta^{2}$ returns a distribution over the three
+vigilance states $\mathcal{Y} = \{\textsc{wake}, \textsc{sws},
+\textsc{rem}\}$. Table~\ref{tab:features} enumerates the components of
+$\phi$ and Algorithm~\ref{alg:pipeline} gives the end-to-end procedure.
+
+
+\subsection{Spectral Features}
+\label{subsec:spectral}
+
+Each epoch is converted to a one-sided power spectral density (PSD)
+estimate by Welch's method \citep{welch1967}. The epoch is divided into
+$K$ segments of $L$ samples overlapping by $D$ samples, written
+$x^{(k)}_n = x_{\,n + (k-1)(L-D)}$ for $n = 0, \dots, L-1$. Each segment is
+multiplied by a window $w \in \mathbb{R}^{L}$ with energy
+$U = \sum_{n} w_n^{2}$, and the resulting modified periodograms are
+averaged:
+%
+\begin{equation}
+\label{eq:welch}
+\hat{S}(f) \;=\;
+\frac{1}{K f_s U}
+\sum_{k=1}^{K}
+\left|
+\sum_{n=0}^{L-1} w_n\, x^{(k)}_n\,
+e^{-\mathrm{j} 2\pi f n / f_s}
+\right|^{2}.
+\end{equation}
+%
+The estimator is fully determined by the window function $w$, the segment
+length $L$, the overlap $D$, the transform length $N_{\mathrm{FFT}}$, the
+per-segment detrending rule, and the output scaling; the achievable
+frequency resolution is $\Delta f = f_s / L$.
+
+% REQUIRES_EXPERIMENT: transcribe from the feature-extraction code the
+% exact scipy.signal.welch arguments -- window, nperseg (L), noverlap (D),
+% nfft, detrend, scaling ('density' vs 'spectrum') -- and report the
+% resulting Delta f. Do not guess: with f_s = 500 Hz, any segment shorter
+% than 2 s cannot resolve the lower edge of the delta band at all, so this
+% parameter materially determines whether the headline delta feature is
+% well defined.
+\noindent
+% Fill the four bracketed slots below from the code, then delete this note.
+We use a [window] window with $L = [\;]$ samples and $D = [\;]$ samples of
+overlap, giving $\Delta f = [\;]$\,Hz.
+
+Five canonical bands are used:
+$\delta = [0.5, 4)$\,Hz,
+$\theta = [4, 8)$\,Hz,
+$\alpha = [8, 12)$\,Hz,
+$\beta = [12, 30)$\,Hz and
+$\gamma = [30, 100)$\,Hz.
+% REQUIRES_EXPERIMENT: confirm the half-open band-edge convention above
+% against the code. The manuscript writes the bands as closed intervals
+% (0.5--4, 4--8, ...), which leaves the assignment of a bin falling
+% exactly on an edge undefined. State whichever convention the code uses;
+% the interval notation above is a proposal, not a measurement.
+Writing $B_b \subset [0, f_s/2]$ for the frequency support of band $b$,
+we compute for each band its absolute power, its relative power, and its
+peak frequency:
+%
+\begin{align}
+P_b       &= \Delta f \!\!\sum_{f \in B_b}\!\! \hat{S}(f),
+\label{eq:bandpower}\\
+\tilde{P}_b &= P_b \Big/ \sum_{b' \in \mathcal{B}} P_{b'},
+\label{eq:relpower}\\
+f_b^{\star} &= \operatorname*{arg\,max}_{f \in B_b} \hat{S}(f).
+\label{eq:peakfreq}
+\end{align}
+%
+% REQUIRES_EXPERIMENT: three conventions to transcribe here, each of which
+% changes the numbers: (i) whether band power is the integral of
+% Eq. (2) or the mean PSD over the band; (ii) whether the denominator of
+% Eq. (3) is the sum over the five bands, as written, or total power over
+% the full 0.5--100 Hz support; (iii) whether a log transform was applied
+% to P_b before it entered the design matrix.
+Finally, normalizing the PSD to a distribution
+$p(f) = \hat{S}(f) / \sum_{f' \in F} \hat{S}(f')$ over the analysis support
+$F$, we take the normalized spectral entropy
+%
+\begin{equation}
+\label{eq:spectralentropy}
+H(x) \;=\; -\frac{1}{\log |F|} \sum_{f \in F} p(f) \log p(f)
+\;\in\; [0,1],
+\end{equation}
+%
+which is $0$ for a pure tone and $1$ for a flat spectrum and therefore
+indexes how broadband an epoch is.
+% REQUIRES_EXPERIMENT: state the support F (full spectrum, or per band)
+% and the logarithm base. The design matrix underlying Figure 3 contains a
+% single column named "entropy", whereas the current Methods prose says
+% spectral entropy was computed "for each frequency band". Those two
+% statements cannot both be right; resolve against the code before
+% filling the dimensionality of this row in Table 1.
+
+
+\subsection{Hjorth Descriptors}
+\label{subsec:hjorth}
+
+% NOTE: this subsection is new. Hjorth activity, mobility and complexity
+% are the two highest-ranked features in the paper's own Figure 3 and are
+% currently introduced for the first time in the Results section, with no
+% definition and no citation. "activity" is never mentioned in the text at
+% all. Item D13 of the revision plan.
+Alongside the frequency-domain descriptors we compute the three time-domain
+descriptors introduced by \citet{hjorth1970}. Let $x'$ and $x''$ denote the
+first and second derivatives of the epoch. \emph{Activity} is the signal
+variance, \emph{mobility} is the ratio of the standard deviation of the
+derivative to that of the signal, and \emph{complexity} is the mobility of
+the derivative relative to the mobility of the signal:
+%
+\begin{align}
+A(x) &= \operatorname{Var}(x), \label{eq:activity}\\
+M(x) &= \sqrt{\operatorname{Var}(x') \big/ \operatorname{Var}(x)},
+\label{eq:mobility}\\
+C(x) &= M(x') \big/ M(x). \label{eq:complexity}
+\end{align}
+%
+These are not independent of the spectral features defined above.
+% NOTE: do not replace this with \ref to a subsection label. The template
+% sets secnumdepth to 0, so subsections carry no number and \ref to a
+% subsection label prints a stale counter value, not a section number.
+Writing $m_k = \int \omega^{k} S(\omega)\,d\omega$
+for the $k$-th moment of the power spectrum, one has $A = m_0$,
+$M = \sqrt{m_2/m_0}$ and $C = \sqrt{m_4 m_0 / m_2^{2}}$: mobility is a
+normalized mean frequency and complexity is a normalized spectral
+bandwidth. Both are therefore functions of the same spectrum that produces
+$P_b$ and $\tilde{P}_b$, and are strongly collinear with the band-power
+features by construction. We note this explicitly because gain-based
+importance attribution distributes credit arbitrarily among collinear
+predictors, which bears directly on how the rankings reported later should
+be read.
+
+% REQUIRES_EXPERIMENT: state (i) whether x' and x'' are computed as
+% first differences (x'_n = x_n - x_{n-1}) or as scaled derivatives
+% (divided by 1/f_s), and (ii) whether they are computed on the raw or on
+% a filtered signal. Point (i) is not cosmetic: at f_s = 500 Hz the two
+% conventions differ by a factor of 500 in mobility. Complexity, being a
+% ratio of two mobilities, is invariant to the choice; mobility is not.
+% Since mobility is the second-ranked feature in Figure 3, the convention
+% must be stated for the value to be reproducible.
+
+
+\subsection{Maximum--Minimum Distance}
+\label{subsec:mmd}
+
+% ATTRIBUTION FIX (item A6.4 / D12): the words "custom" (line 189) and
+% "novel" (line 201) must be deleted from the manuscript. The feature is
+% attributed to the reference cited in the very same sentence. The
+% abstract only lists MMD as a feature used, never as a new one, so this
+% correction is abstract-safe.
+The Maximum--Minimum Distance (MMD) descriptor was introduced for
+human sleep staging by \citet{e18090272}; here we evaluate it for rodent
+vigilance staging. It summarizes within-epoch amplitude excursion using a
+sliding sub-window, and is intended to separate the high-amplitude
+synchronized oscillations of SWS from the lower-amplitude, more variable
+waveforms of REM and wake without reference to any particular frequency
+band.
+
+Let $W$ be the sub-window length in samples and $s$ the stride, giving
+$K_{\mathrm{MMD}} = \lfloor (N - W)/s \rfloor + 1$ sub-windows
+$\mathcal{W}_k = \{(k-1)s + 1, \dots, (k-1)s + W\}$. Within sub-window $k$
+we locate the extremal samples and their positions,
+%
+\begin{equation}
+\label{eq:mmdargs}
+n_k^{+} = \operatorname*{arg\,max}_{n \in \mathcal{W}_k} x_n,
+\qquad
+n_k^{-} = \operatorname*{arg\,min}_{n \in \mathcal{W}_k} x_n,
+\end{equation}
+%
+and form a per-sub-window distance $d_k$. The epoch-level feature is an
+aggregation of these distances over the sub-windows,
+%
+\begin{equation}
+\label{eq:mmd}
+\mathrm{MMD}(x) \;=\; \Phi\!\left( d_1, \dots, d_{K_{\mathrm{MMD}}} \right).
+\end{equation}
+%
+The manuscript describes $d_k$ as ``the statistical distance between
+maximum and minimum signal values,'' which admits two instantiations that
+give different numbers:
+%
+\begin{align}
+d_k^{\mathrm{amp}} &= x_{n_k^{+}} - x_{n_k^{-}},
+\label{eq:mmdamp}\\
+d_k^{\mathrm{euc}} &= \sqrt{\,\alpha^{2}\big(n_k^{+} - n_k^{-}\big)^{2}
+                     + \big(x_{n_k^{+}} - x_{n_k^{-}}\big)^{2}\,}.
+\label{eq:mmdeuc}
+\end{align}
+%
+Equation~(\ref{eq:mmdamp}) is the peak-to-peak amplitude range within the
+sub-window. Equation~(\ref{eq:mmdeuc}) is the Euclidean distance between
+the two extremal points in the time--amplitude plane, where $\alpha$ is the
+scaling that maps a sample offset onto the time axis ($\alpha = 1$ for
+sample index, $\alpha = 1/f_s$ for seconds). The second form is not
+invariant to $\alpha$ or to the amplitude units, so both must be stated for
+the feature to be reproducible.
+
+% REQUIRES_EXPERIMENT: transcribe from the feature-extraction code, and
+% then delete the sentence below and state the values directly:
+%   (1) the sub-window length W and stride s (are the sub-windows
+%       overlapping or contiguous?);
+%   (2) which of Eq. (9) or Eq. (10) is computed, and if Eq. (10), the
+%       value of alpha and the amplitude units;
+%   (3) the aggregation Phi -- sum, mean, or max over sub-windows.
+%       Results (line 329) calls MMD "a single scalar per epoch", so some
+%       aggregation is applied, but the manuscript never says which.
+% The source work of Aboalayon et al. is reported in the secondary
+% literature as using a 1 s sliding sub-window with a summed Euclidean
+% distance. That is the LITERATURE convention, NOT a measurement of this
+% pipeline. Do not copy it into the paper as though it were this paper's
+% setting -- check the code.
+\noindent
+We use $W = [\;]$ samples ($[\;]$\,s) with stride $s = [\;]$, the distance
+of Equation~([\;]), and $\Phi = [\;]$.
+
+
+\subsection{Cross-Frequency Coupling}
+\label{subsec:cfc}
+
+% =====================================================================
+% !! READ THIS BEFORE INCLUDING THIS SUBSECTION !!
+%
+% This subsection is a SLOT, not a claim. As of the submitted version,
+% the Methodology defines no coupling quantity, and the model's own input
+% enumeration in Figures 3 and 4 (complexity, mobility, alpha/delta/
+% gamma/beta/theta_power, activity, animal, mmd, entropy, eeg_data, plus
+% raw sample indices) contains no coupling measure of any kind.
+%
+% Three outcomes, per section 6.1 of the revision plan:
+%
+%  (a) The code DOES compute a coupling quantity that never reached the
+%      figures. Then fill the slots below, regenerate the figures from
+%      the model that contains it, and the abstract becomes accurate.
+%      This subsection ships as written. -- TRACK A.
+%
+%  (b) No coupling quantity is computed and the authors compute one and
+%      retrain. This subsection ships once that is done. -- TRACK B.
+%
+%  (c) No coupling quantity is computed and none is added. Then DELETE
+%      this entire subsection, delete the CFC row from
+%      Table~\ref{tab:features}, delete the CFC line from
+%      Algorithm~\ref{alg:pipeline}, and delete the CFC claims at lines
+%      115 and 129 of the manuscript. The frozen abstract will then
+%      overstate the method by one clause, which cannot be repaired by
+%      writing -- but a body that silently repeats an unsupported claim
+%      is strictly worse than a body that quietly does not make it.
+%
+% Under NO circumstances should a coupling formula be written here that
+% the pipeline does not compute.
+% =====================================================================
+Cross-frequency coupling (CFC) quantifies the dependence between activity
+in a low-frequency \emph{phase} band $B_{\varphi}$ and a high-frequency
+\emph{amplitude} band $B_{a}$ \citep{canolty2010}. The epoch is band-pass
+filtered into the two bands, and the analytic signal obtained by the
+Hilbert transform $\mathcal{H}$ supplies an instantaneous phase and an
+instantaneous amplitude envelope,
+%
+\begin{equation}
+\label{eq:analytic}
+\varphi(t) = \arg \mathcal{H}\big[x_{B_{\varphi}}\big](t),
+\qquad
+a(t) = \big| \mathcal{H}\big[x_{B_{a}}\big](t) \big|.
+\end{equation}
+%
+A coupling statistic is then a scalar functional of the joint distribution
+of $\varphi$ and $a$ over the epoch. The two standard choices are the
+modulation index of \citet{tort2010}, which bins the phase into $M$ equal
+bins, forms the mean envelope $\bar{a}_m$ in each bin, normalizes it to a
+distribution $q_m = \bar{a}_m / \sum_{m'} \bar{a}_{m'}$, and measures its
+divergence from uniformity,
+%
+\begin{equation}
+\label{eq:mi}
+\mathrm{MI} \;=\; \frac{\log M + \sum_{m=1}^{M} q_m \log q_m}{\log M},
+\end{equation}
+%
+and the mean vector length,
+%
+\begin{equation}
+\label{eq:mvl}
+\mathrm{MVL} \;=\;
+\Big| \tfrac{1}{N} \textstyle\sum_{t=1}^{N} a(t)\, e^{\mathrm{j}\varphi(t)} \Big|.
+\end{equation}
+%
+% REQUIRES_EXPERIMENT: this is prerequisite P1 of the revision plan and
+% must be answered from the feature-extraction code before this subsection
+% is included at all. Required to fill the sentence below:
+%   (1) which statistic is computed -- Eq. (12), Eq. (13), or another;
+%   (2) the band pair(s) (B_phi, B_a) and how many pairs, since this
+%       determines the per-epoch dimensionality of the CFC block;
+%   (3) the band-pass filter design (type, order, zero-phase or not) and,
+%       for Eq. (12), the phase-bin count M;
+%   (4) whether any surrogate-based normalization was applied.
+% If the answer to (1) is "none", see the guard comment above and delete
+% this subsection rather than filling it.
+\noindent
+We compute [statistic] over the band pair(s) [$B_{\varphi}$, $B_{a}$],
+yielding [$k$] coupling features per epoch.
+
+
+% =====================================================================
+% FEATURE TABLE
+% This is the "one row per column of the design matrix" table of item
+% A6.6. Dagger-marked cells are the ones that cannot be filled without
+% reading the extraction code; the caption says so explicitly rather than
+% carrying an invented number.
+%
+% If this becomes Table 1, renumber the existing performance table in the
+% Results section and update its \ref.
+% =====================================================================
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcp{3.0cm}@{}}
+\toprule
+\textbf{Descriptor} & \textbf{Dim.} & \textbf{Intended content} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Spectral, from the Welch PSD, Eq.~(\ref{eq:welch})}}\\
+Absolute band power $P_b$   & 5            & Oscillatory energy per canonical band \\
+Relative band power $\tilde{P}_b$ & $\dagger$ & Spectral shape, invariant to overall gain \\
+Peak frequency $f_b^{\star}$ & $\dagger$   & Dominant rhythm within a band \\
+Spectral entropy $H$        & $\dagger$    & Broadband vs.\ rhythmic character \\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Time-domain}}\\
+Hjorth $A, M, C$            & 3            & Variance, normalized mean frequency, spectral bandwidth \\
+$\mathrm{MMD}$              & 1            & Within-epoch amplitude excursion \\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Coupling}}\\
+CFC statistic               & $\dagger$    & Phase--amplitude dependence across bands \\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Non-signal columns present in the fitted model}}\\
+Animal index                & $\dagger$    & Categorical identifier of the recorded subject \\
+Raw-sample columns          & $\dagger$    & Untransformed epoch samples \\
+\midrule
+\textbf{Total} $d$          & $\dagger$    & \\
+\bottomrule
+\end{tabular}
+\caption{Components of the feature map $\phi$. Entries marked $\dagger$
+are determined by implementation choices that the present description does
+not fix and are stated in the released extraction code. The final two
+blocks are not signal descriptors: they are additional columns of the
+design matrix, disclosed here because they are visible in the attribution
+analysis reported later.}
+\label{tab:features}
+\end{table}
+% REQUIRES_EXPERIMENT: fill every dagger from the design matrix that
+% produced the reported model, and make the total agree with the "5,009
+% features" figure quoted for the network input. Note that the arithmetic
+% does not currently close under any reading: 5,000 raw samples plus the
+% 11 named columns visible in the SHAP figure is 5,011, not 5,009. If the
+% classifier and the neural-network baseline did not receive the same
+% columns, that must be stated here and the model comparison reframed
+% accordingly.
+
+
+% =====================================================================
+% ALGORITHM BOX (item A6.7)
+% Requires \usepackage{algorithm} and \usepackage{algorithmic}; see the
+% notice at the top of this file.
+% =====================================================================
+\begin{algorithm}[t]
+\caption{Vigilance-state classification pipeline}
+\label{alg:pipeline}
+\begin{algorithmic}[1]
+\REQUIRE Single-channel EEG recording $r$ from animal $a$; sampling rate
+         $f_s = 500$\,Hz; epoch length $T = 10$\,s
+\ENSURE  Per-epoch posterior $\hat{p} \in \Delta^{2}$ and label
+         $\hat{y} \in \mathcal{Y}$
+\STATE $r \leftarrow \textsc{Preprocess}(r)$
+       \COMMENT{filter cascade, notch, artifact rule}
+\STATE Segment $r$ into non-overlapping epochs
+       $x^{(1)}, \dots, x^{(E)} \in \mathbb{R}^{N}$, $N = T f_s$
+\FOR{each epoch $x = x^{(e)}$}
+  \STATE $\hat{S} \leftarrow \textsc{Welch}(x; w, L, D, N_{\mathrm{FFT}})$
+         \COMMENT{Eq.~(\ref{eq:welch})}
+  \FOR{each band $b \in \{\delta, \theta, \alpha, \beta, \gamma\}$}
+    \STATE $P_b, \tilde{P}_b, f_b^{\star} \leftarrow$
+           Eqs.~(\ref{eq:bandpower})--(\ref{eq:peakfreq})
+  \ENDFOR
+  \STATE $H \leftarrow$ Eq.~(\ref{eq:spectralentropy})
+  \STATE $A, M, C \leftarrow$ Eqs.~(\ref{eq:activity})--(\ref{eq:complexity})
+  \STATE $\mathrm{MMD} \leftarrow$ Eq.~(\ref{eq:mmd})
+  \STATE $\mathrm{CFC} \leftarrow$ Eq.~(\ref{eq:mi}) or (\ref{eq:mvl})
+         \COMMENT{omit if not computed}
+  \STATE $\phi(x) \leftarrow
+          \big[\{P_b, \tilde{P}_b, f_b^{\star}\}_b, H, A, M, C,
+          \mathrm{MMD}, \mathrm{CFC}\big]$
+\ENDFOR
+\STATE Partition epochs into training and test sets
+       \COMMENT{protocol stated in the experimental setup}
+\STATE Fit gradient-boosted trees \citep{Chen_2016} on the training
+       features and labels
+\STATE $\hat{p} \leftarrow f(\phi(x))$;\;
+       $\hat{y} \leftarrow \operatorname*{arg\,max}_{y \in \mathcal{Y}} \hat{p}_y$
+\end{algorithmic}
+\end{algorithm}
+% REQUIRES_EXPERIMENT: line 1 (Preprocess) is written as a named step
+% because the manuscript describes no preprocessing at all -- the words
+% filter, notch, detrend, re-reference and artifact rejection appear
+% nowhere, and 8 animals x 48 h x 360 epochs/h = 138,240 exactly, meaning
+% no epoch was excluded. Either specify the cascade (type, cutoffs, order,
+% zero-phase, mains notch frequency, reference scheme, rejection rule and
+% the number of epochs excluded), or replace line 1 with an explicit
+% statement that the signal was used unprocessed and add the corresponding
+% limitation. Do not leave the step nameless.
+% Line 15 (Partition) deliberately does not name a split: the manuscript
+% currently describes four mutually inconsistent protocols. Name exactly
+% one here once item A7 of the revision plan is done.

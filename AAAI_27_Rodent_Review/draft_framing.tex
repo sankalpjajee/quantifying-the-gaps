@@ -1,0 +1,526 @@
+% =====================================================================================
+% DRAFT: FRAMING AND POSITIONING REWRITE
+% Target file: /home/user/quantifying-the-gaps/AAAI_27_Rodent/AnonymousSubmission2027.tex
+% Covers REVISION_PLAN items A2 (partial), A3, A6.1, A8.3, A8.7.
+% Author of this draft: framing/positioning agent. Date: 2026-07-26.
+% =====================================================================================
+%
+% ------------------------------- RATIONALE ------------------------------------------
+%
+% WHAT THIS FILE CONTAINS
+%   PART A  Rewritten Introduction  (replaces lines 106-117 of the submission)
+%   PART B  Rewritten Related Work  (replaces lines 119-142)
+%   PART C  New "Problem Formulation" subsection (insert at the head of Methodology,
+%           before current line 168 "Data Collection and Experimental Design")
+%   PART D  Title analysis and three alternative titles (comments only, no LaTeX body)
+%   PART E  Compile prerequisites: bib keys, labels, the exact deletions this draft
+%           assumes have already been made, and the citation verification log.
+%   PART F  Measured compile result and page budget, with a ranked cut list.
+%
+% TRACK LABELS. Every recommendation in this file is marked (A) or (B):
+%   (A) = writing/restructuring only, zero new experiments. Everything in PARTS A, B,
+%         C and D is Track A EXCEPT where explicitly marked otherwise.
+%   (B) = requires running code on the authors' data. Marked inline with
+%         "% REQUIRES_EXPERIMENT: <what to run>".
+%   In addition, some slots need a FACT the authors already possess but that is not in
+%   the manuscript (the contents of the design matrix, the Welch parameters, the
+%   XGBoost objective actually used). Those are NOT experiments, so they get a separate
+%   marker: "% AUTHORS_MUST_SUPPLY (P2): <what fact>". Do not conflate the two.
+%   NO NUMBER APPEARS IN THIS FILE THAT IS NOT EITHER (a) ALREADY IN THE SUBMISSION,
+%   OR (b) TAKEN FROM A PUBLISHED PAPER I VERIFIED THIS SESSION AGAINST THE
+%   PUBLISHER RECORD (see PART E for the verification log).
+%
+% WHY THE FRAMING CHANGES AT ALL
+%   The submission's framing is "we built an accurate rodent sleep scorer." That frame
+%   loses on contact with the literature: IntelliSleepScorer reports 95.2% accuracy and
+%   Cohen's kappa = 0.91 on 124 mice, and SlumberNet reports 97% accuracy / 96% F1.
+%   Both are real, both are verified below, and both beat 91.5%. A reviewer finds them
+%   in one search. The body's "state-of-the-art 91.5%" is therefore a claim that can be
+%   falsified in thirty seconds, and it is a claim the FROZEN ABSTRACT NEVER MAKES --
+%   the abstract says only "outperforming all baseline methods," which is scoped to
+%   this paper's own baselines. Deleting the SOTA framing costs nothing and contradicts
+%   nothing.
+%   The replacement frame is: accuracy is not the informative axis in this application
+%   any more; what is unreported across the whole rodent-scoring literature is (i) what
+%   the decision rests on and (ii) whether the confidence scores mean anything. This
+%   paper already contains a SHAP analysis and a reliability diagram. Nothing new has
+%   to be run to make those the headline; they only have to be described accurately and
+%   promoted from the bottom of Results to the contributions list. That is the single
+%   highest-leverage Track A move available.
+%
+% WHAT THIS DRAFT DELIBERATELY DOES NOT DO
+%   1. It does not mention cross-frequency coupling anywhere in the body. The submitted
+%      Methodology defines no coupling quantity, and the paper's own Figures 3 and 4
+%      enumerate the model inputs without one. Per REVISION_PLAN section 6.2, this is
+%      not fixable by writing. This draft takes option (c): remove every body claim, so
+%      the exposure is reduced to the frozen abstract and the title. If the authors
+%      find a CFC computation in the code (option (a)) or add one (option (b)), a
+%      feature block phi_cfc slots into the feature map in PART C at the marked point.
+%      DO NOT INVENT A COUPLING FORMULA TO FILL THAT SLOT.
+%   2. It does not assert the model generalizes across animals. Nothing in the
+%      submission measures that.
+%   3. It does not assert the classifier is well calibrated. The submission's own
+%      Figure 5 shows one class systematically above the diagonal. The contribution is
+%      framed as a calibration *audit*, which is what the paper actually contains and
+%      which survives whatever the recomputed numbers turn out to be.
+%   4. It does not describe the feature basis as "low-dimensional" without a hedge,
+%      because the design matrix may contain 5,000 raw sample columns and an integer
+%      animal index (REVISION_PLAN section 0.2). See the marked bullet in PART A.
+%
+% ABSTRACT-CONSISTENCY CHECK (the abstract is frozen; every line below was checked)
+%   91.5 / 86.8 / 81.2 / 83.5 ......... preserved verbatim, now with the protocol named.
+%   three states REM/SWS/wake ......... preserved.
+%   spectral band power delta-gamma ... preserved.
+%   MMD ............................... preserved as a feature used; the word "custom"/
+%                                       "novel" is dropped, which the abstract never
+%                                       claimed anyway.
+%   cross-frequency coupling .......... NOT repeated in the body. See note 1 above.
+%   XGBoost ........................... preserved.
+%   "outperforming all baseline methods" ... preserved; the body must substantiate it
+%                                       with the LR row (REVISION_PLAN A7/B7).
+%   "code released as a public resource" ... preserved; contributions bullet 5 restates
+%                                       it, which obliges the archive to actually exist.
+% ------------------------------- END RATIONALE --------------------------------------
+
+
+% =====================================================================================
+% PART A  --  INTRODUCTION  (Track A)
+% Replaces the submission's lines 106-117 in full.
+% Target length ~0.75 page. Current five paragraphs (~640 words) compress to four
+% (~360 words) plus the contributions list.
+% Deletions this incorporates: the duplicated physiology paragraph (now in Related
+% Work only), the competition citation \citep{bdhsc2024case} (anonymity, A1.9), the
+% clause "allowing the model to generalize across individual animals and diverse
+% recording conditions" (unmeasured), "with balanced precision, recall, and F1-scores
+% across states" (contradicted by the paper's own arithmetic), and the CFC clause.
+% =====================================================================================
+
+\section{Introduction}
+
+Preclinical sleep research runs on vigilance-state labels. Rodent electroencephalography (EEG) is segmented into short epochs, and every epoch is assigned to wakefulness, slow-wave sleep (SWS), or paradoxical (REM) sleep before any downstream analysis---of sleep architecture, drug response, or circadian phenotype---can begin \citep{rechtschaffen2002sleep}. That labelling step is still performed by hand. A trained scorer needs two to four hours per 24\,h recording, and independent scorers agree only at $\kappa = 0.76$--$0.85$. The cost grows linearly with cohort size and the disagreement does not average away, so annotation, rather than recording or analysis, sets the scale of study the field can run.
+
+Automated scorers have accordingly been built for three decades, from spectral thresholds and Bayesian classifiers through boosted-tree ensembles to end-to-end deep networks (\S\ref{sec:related}). Within-cohort accuracy is no longer the bottleneck: published rodent scorers report 95.2\% accuracy with $\kappa = 0.91$ using a boosted-tree model over EEG and EMG \citep{wang2023_intellisleepscorer}, and 97\% accuracy with a 96\% F1 using a residual network \citep{jha2024_slumbernet}. What these systems do not report is equally consistent. None of them states which signal properties its decisions rest on in a form a physiologist can check, and none reports whether its predicted class probabilities behave as probabilities---even though the intended downstream use, closed-loop stimulation triggered when a predicted state probability crosses a threshold, depends on exactly that property and not on accuracy.
+
+This motivates the question we ask. \emph{How much of the accuracy of end-to-end deep rodent sleep scorers is recoverable from a small set of physiologically grounded single-channel EEG descriptors, and what is gained, in attribution and in probability calibration, by giving that accuracy up?}
+
+We study this on 138{,}240 ten-second epochs of single-channel EEG sampled at 500\,Hz from eight laboratory rodents. We compute spectral band descriptors, Hjorth time-domain parameters \citep{hjorth1970}, and the Maximum--Minimum Distance (MMD) amplitude statistic introduced for human sleep staging by \citet{e18090272}, and classify each epoch with a gradient-boosted tree ensemble \citep{Chen_2016}. The ensemble reaches 91.5\% accuracy, 86.8\% precision, 81.2\% recall and 83.5\% F1 under the epoch-wise stratified protocol defined in \S\ref{sec:problem}---a protocol under which every animal contributes epochs to both partitions, and which we therefore report as a within-cohort estimate rather than as a measure of transfer to unseen animals. We then audit that model: a TreeSHAP attribution analysis \citep{lundberg2017_shap} of which descriptors carry the decision, and a reliability analysis of the predicted probabilities.
+
+% REQUIRES_EXPERIMENT (B1): if the retrained model without the animal-index column
+% yields different headline figures, this paragraph must name which configuration each
+% number belongs to. See REVISION_PLAN 6.2(2) for the least-bad honest presentation.
+
+\noindent Our contributions are:
+\begin{itemize}\itemsep1pt\parskip0pt
+\item \textbf{A formal statement of the rodent vigilance-staging task} and of the two evaluation regimes under which it is scored---subject-dependent and subject-independent---making explicit the independence assumption that a pooled epoch-wise split requires and that continuous recordings from a handful of animals violate.
+\item \textbf{A fully specified feature basis} for single-channel rodent vigilance staging: every descriptor defined as an equation, its per-epoch dimensionality stated, the full design matrix enumerated, and the extraction code released.
+% AUTHORS_MUST_SUPPLY (P2): this bullet is only true once the design matrix is
+% enumerated in the feature table (REVISION_PLAN A6.6). If the matrix contains 5,000
+% raw sample columns and an integer animal index, the word "compact" or
+% "low-dimensional" MUST NOT appear here -- say "fully specified" (as written) and let
+% the table carry the facts. Do not restore "low-dimensional" until B4 is run.
+\item \textbf{An attribution audit} identifying which descriptors the classifier's decisions rest on and, equally, which of the features the paper introduces contribute little---reported as attribution magnitudes, with the limits of that evidence stated.
+\item \textbf{A calibration analysis} of the predicted class probabilities---a reliability analysis together with a proper scoring rule---which, to our knowledge, no published rodent vigilance scorer reports, and which determines what the confidence scores can and cannot be thresholded on for closed-loop use.
+% VERIFY BEFORE SUBMISSION: the clause "to our knowledge, no published rodent
+% vigilance scorer reports" is the paper's new central novelty claim. I searched for
+% calibration/reliability/ECE/Brier reporting in rodent sleep scoring this session and
+% found none, but one negative search is not proof. Open each of
+% wang2023_intellisleepscorer, jha2024_slumbernet, smith2025_ratlstm,
+% saevskiy2025_sensors, gao2016_multi_cls and confirm none reports a reliability
+% diagram, ECE, or Brier score. If any does, weaken to "rarely reported" and cite it.
+\item \textbf{An explicit account of the evaluation protocol}, including the subject-dependence of the epoch-wise split that is standard in this application literature, and a statement of what it does and does not license.
+\end{itemize}
+
+% NOTE ON BULLET 5. It is deliberately honest rather than triumphant. That is what
+% converts the split protocol from a defect a reviewer discovers into a scope condition
+% the authors declared. Do not "strengthen" it.
+% A sixth bullet claiming the released code archive belongs here ONLY once the
+% anonymized archive is actually uploaded (REVISION_PLAN A9/D18); the frozen abstract
+% already promises it, so the obligation exists regardless.
+
+
+% =====================================================================================
+% PART B  --  BACKGROUND AND RELATED WORK  (Track A)
+% Replaces the submission's lines 119-142 in full.
+% Six subsections instead of six; the physiology subsection absorbs the deleted
+% Introduction paragraph, and a new "Evaluation Protocol and Generalization"
+% subsection sets up the paper's own scope statement.
+% EVERY citation key used here is either already in references.bib or listed in
+% PART E with a verified publisher record. NO OTHER KEYS.
+% =====================================================================================
+
+\section{Background and Related Work}
+\label{sec:related}
+
+\subsection{Rodent Sleep Architecture and the Cost of Manual Scoring}
+Vigilance in laboratory rodents is conventionally divided into wake, non-rapid-eye-movement (NREM) sleep, and REM sleep \citep{rechtschaffen2002sleep}. Wakefulness shows mixed-frequency, low-amplitude EEG with high electromyogram (EMG) tone; NREM, usually called slow-wave sleep (SWS) in rodent work, is dominated by high-amplitude $\delta$ (0.5--4\,Hz) oscillations; and REM shows low-amplitude, $\theta$-rich (6--9\,Hz) EEG with near-complete muscle atonia \citep{walker2009role}. Two properties of the labels matter for what follows. First, REM occupies only a small minority of epochs---roughly 8\% in the present corpus---so aggregate accuracy is dominated by the two majority states. Second, the reference standard is itself noisy: expert scorers agree at $\kappa = 0.76$--$0.85$, which bounds how any agreement figure measured against a single scoring pass should be read.
+
+\subsection{Classical Feature-Based Scoring}
+The first generation of automated scorers engineered spectral power, band ratios, and amplitude statistics, and classified them with linear discriminants, Bayesian classifiers, or classifier ensembles \citep{gao2016_multi_cls}. Unsupervised variants remain competitive and avoid the annotation cost entirely: \citet{saevskiy2025_sensors} combine artifact processing, narrow- and broad-band spectral analysis, and Gaussian-mixture clustering with a majority-voting rule, reporting sleep--wake classification accuracies of 92\% on ten rats and 93\% on ten mice, with REM-specific detection accuracies of 91\% and 89\% respectively. Their implementation (SAGER) is open source and operates on single-channel EEG, which makes it the one published method in this space that could be executed directly on the present cohort.
+% REQUIRES_EXPERIMENT (B11): run SAGER on these eight animals under the identical
+% protocol and report the head-to-head. Until that is run, write no comparative number
+% here beyond the figures SAGER's own authors report on their own cohorts.
+% NOTE FOR THE AUTHORS: the submitted manuscript placed this work under "Gradient-
+% Boosted Trees" and quoted its 89% figure as an overall accuracy. Both are wrong.
+% The method is Gaussian-mixture clustering, not boosting, and 89% is the REM-specific
+% detection accuracy in mice. Verified this session at PMC11820057.
+
+\subsection{Boosted Trees for Rodent Vigilance Staging}
+Boosting over engineered descriptors \citep{Chen_2016} is the method family our system belongs to, and the closest published instance is IntelliSleepScorer \citep{wang2023_intellisleepscorer}, a LightGBM scorer for mice trained on 5{,}776\,h of recording across 519 sessions from 124 animals, reporting 95.2\% accuracy and Cohen's $\kappa = 0.91$ against a logistic-regression baseline at 93.3\% ($\kappa = 0.88$) and a random-forest baseline at 94.3\% ($\kappa = 0.89$). We do not claim to improve on it, and the two systems are not directly comparable: it consumes EEG together with EMG, it is trained on a cohort two orders of magnitude larger than ours, and its evaluation protocol differs from the one defined in \S\ref{sec:problem}. What it does not report is per-feature attribution or any assessment of whether its predicted probabilities are calibrated. Our work occupies a different point in the same design space---single-channel EEG without EMG on a small cohort---and supplies exactly those two analyses.
+
+\subsection{End-to-End Deep Scorers}
+Convolutional and recurrent networks learn representations directly from the waveform and currently hold the highest reported within-cohort figures. SlumberNet \citep{jha2024_slumbernet} applies a residual network to paired EEG and EMG in mice under baseline, sleep-deprivation, and recovery conditions, reporting 97\% accuracy and a 96\% F1 under $k$-fold cross-validation. These results set the accuracy ceiling we measure against, and they also delimit the trade-off: the architecture requires multi-modal recording and GPU-scale training, and the learned representation offers no account of which signal properties the decision used.
+
+\subsection{Single-Channel and EMG-Free Scoring}
+Removing the EMG channel lowers surgical burden, tethering, and cost, at the price of the single most informative cue for separating REM from wake. The closest published system to the present setting on every axis is \citet{smith2025_ratlstm}: rats rather than mice, single-channel EEG without EMG, the same three vigilance states, the same 10\,s epoch length, expert-scored data from 16 animals across two 24\,h sessions, and a deep recurrent network over the raw temporal signal reporting a mean F1 of 87.6\% on cross-validated test sets. It is the correct comparison point for this paper, and it differs from our system in two respects that we take to be the substance of our contribution rather than incidental: in representation, where we use explicitly engineered and individually interpretable descriptors instead of a learned deep representation, and in what is reported, since that system provides neither per-feature attribution nor a calibration assessment. Complementary tooling exists downstream: \citet{gamble2025_sleepinvestigator} provide an R function that computes standard sleep-architecture measures from recordings that have \emph{already} been scored, and is therefore a consumer of the output of systems such as ours rather than an alternative to them.
+% ANONYMITY (REVISION_PLAN A1.4): smith2025_ratlstm shares a senior author with the
+% preprint of this manuscript. Cite it in strict third person, exactly as written above.
+% Never "our previous work", never "we previously showed".
+
+\subsection{Evaluation Protocol and Generalization}
+The sleep-staging literature outside rodent work has converged on partitioning by subject or by dataset rather than by epoch. \citet{wang2024_sleepdg} formulate \emph{generalizable} sleep staging as the task itself, aligning feature distributions across source domains and evaluating under leave-one-dataset-out, on the premise that a model selected on pooled epochs from the evaluation cohort tells you little about a new recording. Rodent scorers are frequently evaluated on pooled epochs instead, which measures a different quantity. We adopt that convention for comparability with the rodent literature, define precisely what it estimates in \S\ref{sec:problem}, and state its limits rather than leaving them implicit.
+% REQUIRES_EXPERIMENT (B2/B9): once leave-one-animal-out and contiguous-block splits
+% are run, this subsection becomes the setup for the paper's most interesting result --
+% the gap between the three protocols -- and the last sentence should be rewritten to
+% promise that ladder rather than to concede a limitation.
+
+\subsection{What Is Missing}
+Four gaps persist across this literature.
+\begin{itemize}\itemsep1pt\parskip0pt
+\item[(i)] \emph{Cost and access.} The best-performing scorers assume multi-modal recording and GPU training, and the largest are trained on cohorts most laboratories cannot assemble.
+\item[(ii)] \emph{Cross-subject and cross-laboratory transfer.} Performance under a change of animal, strain, montage, or facility is rarely measured, and is not the quantity a pooled epoch-wise split estimates.
+\item[(iii)] \emph{Interpretability.} Few studies quantify which signal properties actually drive the decision, and fewer still report attribution for the features they introduce.
+\item[(iv)] \emph{Calibration.} No rodent scorer we are aware of reports whether its confidence scores are calibrated, yet closed-loop stimulation protocols threshold on exactly those scores.
+\end{itemize}
+This work addresses (i) with an explicitly specified, physiologically grounded feature basis over a single EEG channel, (iii) with SHAP-based attribution \citep{lundberg2017_shap}, and (iv) with a reliability analysis of the predicted class probabilities. It does not address (ii): cross-laboratory and cross-strain robustness is untested here, and domain-generalization methods of the kind \citet{wang2024_sleepdg} develop define the standard the field is converging on.
+
+% OPTIONAL (Track A, costs ~0.3 column). A positioning table sharpens the section and
+% pre-empts the "how does this compare?" review comment. Every number below is the
+% figure the cited authors report on THEIR OWN cohort under THEIR OWN protocol; the
+% caption must say so, because these are not head-to-head results. Include only if the
+% page budget allows after the Results tables.
+%
+% \begin{table}[t]
+% \centering
+% \small
+% \begin{tabular}{@{}llll@{}}
+% \toprule
+% \textbf{System} & \textbf{Signals} & \textbf{Model} & \textbf{Reported} \\
+% \midrule
+% \citet{jha2024_slumbernet}          & EEG+EMG & ResNet    & 97.0\% acc \\
+% \citet{wang2023_intellisleepscorer} & EEG+EMG & LightGBM  & 95.2\% acc \\
+% \citet{saevskiy2025_sensors}        & EEG     & GMM       & 92--93\% acc \\
+% \citet{smith2025_ratlstm}           & EEG     & Recurrent & 87.6\% F1 \\
+% This work                           & EEG     & XGBoost   & 91.5\% acc \\
+% \bottomrule
+% \end{tabular}
+% \caption{Published rodent vigilance scorers. Each figure is the one its authors
+% report on their own cohort under their own evaluation protocol; the rows are
+% \emph{not} a controlled comparison, and no method in this table has been run on the
+% data used here. Our row is the epoch-wise, subject-dependent estimate defined in
+% \S\ref{sec:problem}.}
+% \label{tab:positioning}
+% \end{table}
+%
+% REQUIRES_EXPERIMENT (B2): add a second row for this work reporting the
+% leave-one-animal-out figure once it exists. That row is what makes the table
+% honest rather than merely tidy.
+
+
+% =====================================================================================
+% PART C  --  PROBLEM FORMULATION  (Track A)
+% New subsection. Insert at the head of the Methodology section, immediately after
+% \section{Methodology} and before "Data Collection and Experimental Design"
+% (submission line 168).
+% Purpose: this is the cheapest available rigor. It flips reproducibility-checklist
+% items 1.1 and 4.9, gives the paper the equations it currently has none of, and --
+% most importantly -- it is where the epoch-wise/subject-wise distinction gets stated
+% as a definition rather than confessed as a limitation.
+% Length ~0.4 page including the three displayed equations.
+% =====================================================================================
+
+\subsection{Problem Formulation}
+\label{sec:problem}
+
+\paragraph{Epochs, animals, and labels.}
+A recording from animal $a \in \mathcal{A} = \{1,\dots,A\}$ is a continuous single-channel EEG trace sampled at $f_s = 500$\,Hz. It is partitioned into non-overlapping epochs of duration $T = 10$\,s, so that each epoch is a vector $x \in \mathcal{X} = \mathbb{R}^{n}$ with $n = f_s T = 5000$ samples. Each epoch carries an expert label $y \in \mathcal{Y} = \{\textsc{Wake}, \textsc{SWS}, \textsc{REM}\}$, indexed hereafter as $\mathcal{Y} = \{1,2,3\}$. The corpus is
+\begin{equation}
+\mathcal{D} = \{(x_i, a_i, y_i)\}_{i=1}^{N},
+\qquad N = 138{,}240, \quad A = 8 .
+\end{equation}
+Epochs are \emph{nested}: each $a$ indexes a contiguous block of $\mathcal{D}$, and within a block, consecutive epochs belong to the same sleep bout far more often than not.
+
+\paragraph{Feature map.}
+A feature map $\phi:\mathbb{R}^{n}\to\mathbb{R}^{d}$ sends an epoch to a descriptor vector $z = \phi(x)$ formed by concatenating the blocks defined in the following subsections,
+\begin{equation}
+\phi(x) \;=\; \big[\, \phi_{\mathrm{spec}}(x)\,;\; \phi_{\mathrm{hj}}(x)\,;\; \phi_{\mathrm{mmd}}(x) \,\big],
+\label{eq:featuremap}
+\end{equation}
+comprising per-band spectral descriptors, Hjorth time-domain parameters \citep{hjorth1970}, and the Maximum--Minimum Distance statistic \citep{e18090272}, of dimensionalities $d_{\mathrm{spec}}$, $d_{\mathrm{hj}}$ and $d_{\mathrm{mmd}}$ with $d = d_{\mathrm{spec}} + d_{\mathrm{hj}} + d_{\mathrm{mmd}}$.
+% AUTHORS_MUST_SUPPLY (P2): the numeric value of d and of each block dimensionality,
+% and whether the design matrix contains any column NOT covered by Eq. (2) -- in
+% particular the integer animal index and the raw sample columns visible in Figures 3
+% and 4. If such columns exist, Eq. (2) must be amended to include them explicitly and
+% the accompanying sentence must say so. Do not ship Eq. (2) as written if it is
+% incomplete: an equation that omits model inputs is worse than no equation.
+% CFC SLOT: if and only if the code computes a cross-frequency coupling quantity, add
+% a block phi_cfc(x) to Eq. (2) and define it (phase band, amplitude band, coupling
+% statistic, filter, bin count, per-epoch dimensionality) in a subsection of its own.
+% If it does not, leave Eq. (2) as written. DO NOT INVENT A COUPLING FORMULA.
+
+\paragraph{Classifier and objective.}
+Let $\Delta^{2} = \{p \in \mathbb{R}^{3}_{\ge 0} : \sum_{c} p_c = 1\}$ be the probability simplex over the three states. The classifier $f_\theta : \mathbb{R}^{d} \to \Delta^{2}$ is a gradient-boosted tree ensemble \citep{Chen_2016}: for each class $c$ it maintains an additive score $F_c(z) = \sum_{k=1}^{K} h_{c,k}(z)$ with each $h_{c,k}$ a regression tree, and returns $f_\theta(z)_c = \exp F_c(z) / \sum_{c'} \exp F_{c'}(z)$. The predicted state is $\hat{y} = \arg\max_c f_\theta(\phi(x))_c$. Training minimizes the regularized objective
+\begin{equation}
+\mathcal{L}(\theta) \;=\; \sum_{i \in \mathcal{I}_{\mathrm{tr}}} \ell\big(y_i, f_\theta(z_i)\big) \;+\; \sum_{c=1}^{3}\sum_{k=1}^{K} \Omega(h_{c,k}),
+\label{eq:objective}
+\end{equation}
+where $\ell(y,p) = -\log p_{y}$ is the multiclass cross-entropy and $\Omega(h) = \gamma\,|L_h| + \tfrac{1}{2}\lambda\lVert w_h \rVert_2^2$ penalizes the number of leaves $|L_h|$ and the leaf weights $w_h$. Trees are added greedily using the second-order approximation of \citet{Chen_2016}; hyperparameters, including $\gamma$, $\lambda$ and $K$, are listed in the experimental setup.
+% AUTHORS_MUST_SUPPLY (P2): the XGBoost objective actually used. The submission lists
+% "multi:softmax" (line 221), which returns HARD LABELS and is therefore incompatible
+% with the reliability diagram and the Brier score the paper reports. Either the
+% reported model used "multi:softprob", or the probabilities came from a different
+% fitted object. Eq. (3) above assumes softprob. State which, or Eq. (3) is wrong.
+
+\paragraph{Two risks, and which one an epoch-wise split estimates.}
+Write $P_a$ for the distribution of labelled epochs generated by animal $a$, and $P_{\mathcal{A}}$ for the pooled distribution over the eight recorded animals. Two population risks are relevant, and they are not the same quantity:
+\begin{equation}
+\begin{aligned}
+R_{\mathrm{epoch}}(f) &= \mathbb{E}_{(x,y)\sim P_{\mathcal{A}}}\big[\mathbf{1}\{\hat{y}(x)\neq y\}\big],\\[2pt]
+R_{\mathrm{subj}}(f)  &= \mathbb{E}_{a^{*}\sim \mathcal{P}}\,\mathbb{E}_{(x,y)\sim P_{a^{*}}}\big[\mathbf{1}\{\hat{y}(x)\neq y\}\big],
+\end{aligned}
+\label{eq:risks}
+\end{equation}
+where $\mathcal{P}$ is a distribution over animals from which the cohort is a sample. A stratified random partition of the pooled epoch set yields an unbiased estimate of $R_{\mathrm{epoch}}$ only, and it does so under an independence assumption that this data violates twice: epochs are nested within animals, and epochs adjacent in time within a sleep bout are strongly dependent, so a held-out epoch frequently has a near-duplicate neighbour in the training partition. Estimates of $R_{\mathrm{subj}}$ require partitioning by animal. All figures reported below are estimates of $R_{\mathrm{epoch}}$ and should be read as within-cohort, subject-dependent performance; we expect them to be optimistic relative to $R_{\mathrm{subj}}$, and we do not report a value for $R_{\mathrm{subj}}$.
+% REQUIRES_EXPERIMENT (B2): leave-one-animal-out over the 8 animals (GroupKFold on the
+% animal index, identical pipeline and hyperparameters) gives the estimate of R_subj.
+% When it exists, replace the final clause with the per-fold mean +/- sd and report the
+% gap between the two risks -- that gap is the most publishable quantity in the paper.
+% REQUIRES_EXPERIMENT (B9): a within-animal contiguous-block split estimates an
+% intermediate risk and completes the three-rung ladder.
+
+\paragraph{Metrics.}
+Let $C \in \mathbb{N}^{3\times 3}$ be the confusion matrix with $C_{cc'}$ the number of test epochs of true state $c$ predicted as $c'$. Accuracy is $\sum_c C_{cc} / \sum_{c,c'} C_{cc'}$. Per-class recall and precision are $R_c = C_{cc}/\sum_{c'} C_{cc'}$ and $P_c = C_{cc}/\sum_{c'} C_{c'c}$, and the macro averages reported throughout are $\bar{R} = \tfrac{1}{3}\sum_c R_c$, $\bar{P} = \tfrac{1}{3}\sum_c P_c$, and $\bar{F}_1 = \tfrac{1}{3}\sum_c 2P_cR_c/(P_c+R_c)$. Because the three states are strongly imbalanced, accuracy and the macro averages measure different things, and we report both alongside Cohen's $\kappa$, which is the quantity directly comparable to the human inter-rater agreement cited above.
+% REQUIRES_EXPERIMENT (B3): per-class P/R/F1 with support, the 3x3 confusion matrix,
+% Cohen's kappa, and balanced accuracy, recomputed from the SAVED PREDICTIONS -- no
+% retraining needed, ~30 minutes. This paragraph promises them; the promise must be
+% kept in Results. Note that the four macro figures already published imply a REM
+% recall a reviewer can derive by hand (REVISION_PLAN 0.3); reporting the real number
+% is strictly better than being seen to have omitted it.
+
+\paragraph{Calibration.}
+A classifier is calibrated if its scores match empirical frequencies: for every $p \in [0,1]$ and every state $c$, $\Pr\big(y = c \,\big|\, f_\theta(z)_c = p\big) = p$. We assess this with a reliability diagram, with the expected calibration error over $M$ equal-width bins $B_1,\dots,B_M$,
+\begin{equation}
+\mathrm{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{N_{\mathrm{te}}}\,\big|\,\mathrm{acc}(B_m) - \mathrm{conf}(B_m)\,\big|,
+\label{eq:ece}
+\end{equation}
+and with the multiclass Brier score $\mathrm{BS} = \tfrac{1}{N_{\mathrm{te}}}\sum_i \sum_{c} \big(f_\theta(z_i)_c - \mathbf{1}\{y_i = c\}\big)^2$. Accuracy measures how often the top-scoring state is right; calibration measures whether the score attached to it can be thresholded. For closed-loop protocols that trigger an intervention when a state probability exceeds a threshold, the second property, not the first, is the binding requirement.
+% AUTHORS_MUST_SUPPLY: the bin count M and the binning scheme actually used (the
+% submission says ten bins; the figure appears to show twenty), whether the diagram is
+% one-vs-rest or top-label, and the Brier normalization convention (the summed form
+% above ranges over [0,2]; some implementations halve it).
+% REQUIRES_EXPERIMENT (B5): recompute ECE, MCE and per-class/multiclass Brier under
+% the clean protocol from B1+B2. The current reported Brier score was computed under
+% the epoch-wise split; if calibration is being promoted to a headline contribution it
+% cannot rest on a split whose test epochs' neighbours were in training.
+
+
+% =====================================================================================
+% PART D  --  TITLE  (Track A; comments only -- nothing here is body LaTeX)
+% =====================================================================================
+%
+% CURRENT TITLE
+%   "XGBoost-Based Automated Vigilance State Classification from Rodent EEG Using
+%    Spectral and Cross-Frequency Features"
+%
+% ASSESSMENT: it under-sells the work in one way and over-claims in another.
+%   (1) It leads with the name of an off-the-shelf library. To an AAAI audience,
+%       "XGBoost-Based" reads as "we called a library," and the title then makes no
+%       claim at all -- it is a description of a pipeline, not of a finding. Every
+%       accepted paper in this space names its contribution: SleepDG's title is
+%       "Generalizable Sleep Staging via Multi-Level Domain Alignment," which names a
+%       task and a mechanism.
+%   (2) "Cross-Frequency Features" advertises a feature family the Methodology never
+%       defines and the paper's own importance figures do not contain. It is the one
+%       phrase in the title a reviewer can check against the body in ten seconds.
+%   (3) "Automated Vigilance State Classification from Rodent EEG" is the generic part
+%       and is fine; it is also, verbatim, close to the title of an already-published
+%       paper in the manuscript's own bibliography (Saevskiy et al., "Open-Source
+%       Algorithm for Automated Vigilance State Classification Using Single-Channel
+%       Electroencephalogram in Rodents"), which does the paper no favours.
+%
+% ORDERING CONSTRAINT, STATED PLAINLY: retitling is cosmetic relief only. The frozen
+% abstract still claims cross-frequency coupling metrics, so dropping the phrase from
+% the title reduces the exposure but does not remove it (REVISION_PLAN 6.2(1)).
+% Retitle only after the CFC question is resolved, and only if the submission form
+% still permits a title change.
+%
+% CANDIDATES, ranked. All three are consistent with the frozen abstract: a title need
+% not enumerate every feature family the abstract lists, and none of these contradicts
+% 91.5%/86.8%/81.2%/83.5%, the three states, MMD, spectral bands, or XGBoost.
+%
+%   T1 (RECOMMENDED)
+%     "What Drives an Automated Rodent Sleep Scorer? Attribution and Calibration for
+%      Single-Channel EEG Vigilance Staging"
+%     -- Names the contribution rather than the tool. Makes attribution and calibration
+%        the subject, which is what the paper can defend and what nothing else in the
+%        rodent literature reports. "Single-Channel EEG" is a true and differentiating
+%        constraint. Claims nothing about accuracy, so it cannot be falsified by
+%        IntelliSleepScorer or SlumberNet. Does not claim the model IS calibrated --
+%        which matters, because the submission's own Figure 5 shows one class
+%        systematically over-confident.
+%
+%   T2 (SAFE, CONSERVATIVE)
+%     "Interpretable Vigilance State Classification from Single-Channel Rodent EEG:
+%      Spectral and Time-Domain Features with an Attribution and Calibration Audit"
+%     -- Closest to the current title, so lowest risk if the form permits only a minor
+%        edit. Replaces "Cross-Frequency" with "Time-Domain," which is accurate
+%        (Hjorth parameters and MMD are both time-domain), and drops the library name.
+%
+%   T3 (STRONGEST, BUT ONLY AFTER TRACK B)
+%     "Subject-Dependent and Subject-Independent Evaluation of Rodent Sleep Scoring:
+%      A Protocol Ladder for Single-Channel EEG"
+%     -- This is the title of the paper the manuscript BECOMES if B1, B2 and B9 are
+%        run and the random / contiguous-block / leave-one-animal-out gap is reported
+%        as the central result. It names a transferable finding rather than an
+%        application, which is what AAAI's CFP asks for. DO NOT USE IT BEFORE THOSE
+%        EXPERIMENTS EXIST -- the title would be promising a result the paper has not
+%        measured.
+%
+% TITLES TO AVOID
+%   Anything containing "Calibrated" as an adjective on the model ("Calibrated
+%   Vigilance State Classification..."). It asserts a property the paper's own figure
+%   currently contradicts for at least one class. "Calibration" as a noun naming an
+%   analysis is fine; "Calibrated" as a claim is not.
+%   Anything containing "State-of-the-Art," "Robust," "Novel," or "High-Accuracy."
+
+
+% =====================================================================================
+% PART E  --  COMPILE PREREQUISITES AND VERIFICATION LOG
+% =====================================================================================
+%
+% E1. THIS DRAFT WILL NOT COMPILE UNTIL references.bib IS UPDATED (REVISION_PLAN A1).
+%     Keys used that ALREADY EXIST in references.bib:
+%       Chen_2016, e18090272, walker2009role, rechtschaffen2002sleep,
+%       saevskiy2025_sensors
+%     Keys used that MUST BE ADDED (entries are given verbatim in REVISION_PLAN A1):
+%       wang2023_intellisleepscorer, jha2024_slumbernet, smith2025_ratlstm,
+%       gamble2025_sleepinvestigator, gao2016_multi_cls, hjorth1970,
+%       lundberg2017_shap, wang2024_sleepdg
+%     Keys deliberately NOT used anywhere in this draft, and which should be deleted
+%     from references.bib:
+%       garcia2021_dlmouse (DOI belongs to an unrelated ERP-topology paper),
+%       banerjee2024_slumbernet (superseded by jha2024_slumbernet),
+%       henderson2025_sleepinvestigator (superseded by gamble2025_sleepinvestigator),
+%       sleepyrat2025_platform (superseded by smith2025_ratlstm),
+%       mcsweeney2016_multi_cls (superseded by gao2016_multi_cls),
+%       yaghouby2016_randomforest (record could not be found),
+%       bdhsc2024case (uniquely identifies the host institution -- anonymity)
+%
+% E2. LABELS THIS DRAFT REFERENCES. \ref to an undefined label compiles but prints
+%     "??". Ensure these exist:
+%       sec:related  -- defined in PART B above.
+%       sec:problem  -- defined in PART C above.
+%     PART A also writes "\S\ref{sec:related}" and "\S\ref{sec:problem}"; both are
+%     satisfied by the two labels above. No numbered section references ("Section 3")
+%     appear anywhere, per secnumdepth 0.
+%
+% E3. PACKAGES. This draft uses only amsmath (align/aligned, \mathbf, \mathbb,
+%     \mathcal, \arg\max, \tfrac), amssymb, enumitem (\itemsep/\parskip on itemize,
+%     and \item[(i)] labels), and natbib. \textsc and \paragraph are base LaTeX.
+%     Nothing new is required. No hyperref, no float, no geometry, no \newpage,
+%     no negative \vspace.
+%
+% E4. CITATION VERIFICATION LOG. Every external work cited in this draft was opened
+%     or confirmed against a publisher/PubMed/PMC record during this session:
+%       wang2023_intellisleepscorer -- Wang, Kern, Yu, Choi, Pan, "IntelliSleepScorer,
+%         a software package with a graphic user interface for automated sleep stage
+%         scoring in mice based on a light gradient boosting machine algorithm",
+%         Scientific Reports 13, 2023, doi 10.1038/s41598-023-31288-2. Confirmed at
+%         nature.com/articles/s41598-023-31288-2 and PMC10017698. 95.2% acc,
+%         kappa 0.91; LR 93.3%/0.88; RF 94.3%/0.89; 5,776 h, 519 recordings, 124 mice.
+%       jha2024_slumbernet -- Jha, Valekunja, Reddy, "SlumberNet: deep learning
+%         classification of sleep stages using residual neural networks", Scientific
+%         Reports 14:4797, 2024, doi 10.1038/s41598-024-54727-0. Confirmed at
+%         nature.com and PMC10899258. 97% accuracy, 96% F1, EEG+EMG, ResNet.
+%         NOTE: the submission's "92.2%" and "attention pooling" appear nowhere in the
+%         source; both are fabricated attributes and must not survive the edit.
+%       smith2025_ratlstm -- Smith, Milosavljevic, Wright, Grant, Pocivavsek, Valafar,
+%         "A deep learning software tool for automated sleep staging in rats via single
+%         channel EEG", NPP--Digital Psychiatry and Neuroscience, 2025,
+%         doi 10.1038/s44277-025-00035-y. Confirmed at nature.com, PubMed 40656054,
+%         PMC12245713. 16 rats, two 24 h sessions, 10 s epochs, three states,
+%         mean F1 87.6%, >700 h expert-scored data released.
+%       saevskiy2025_sensors -- confirmed at PMC11820057. GMM clustering (NOT boosting);
+%         92% rats / 93% mice sleep-wake accuracy; REM detection 91% rats / 89% mice;
+%         SAGER open source.
+%       wang2024_sleepdg -- Wang, Zhao, Jiang, Li, Li, Pan, "Generalizable Sleep Staging
+%         via Multi-Level Domain Alignment", AAAI 2024, 38(1):265--273,
+%         doi 10.1609/aaai.v38i1.27779. Confirmed at ojs.aaai.org/index.php/AAAI/
+%         article/view/27779 and the official repo github.com/wjq-learning/SleepDG.
+%       hjorth1970 -- Hjorth, "EEG analysis based on time domain properties",
+%         Electroencephalography and Clinical Neurophysiology 29(3):306--310, 1970.
+%         Confirmed at PubMed 4195653 and ScienceDirect 0013469470901434.
+%       lundberg2017_shap -- Lundberg and Lee, "A Unified Approach to Interpreting
+%         Model Predictions", NIPS 2017. Canonical; the submission currently uses SHAP
+%         and cites it nowhere.
+%       gamble2025_sleepinvestigator, gao2016_multi_cls -- records as given in
+%         REVISION_PLAN A1.3 and A1.5, verified there against the publisher/PubMed.
+%
+% E5. OPTIONAL EXTRA CITATION, verified this session, not used above but a good
+%     addition to "Classical Feature-Based Scoring" if one more classical reference is
+%     wanted (the subsection currently rests on two):
+%       Rytkonen, K. M.; Zitting, J.; Porkka-Heiskanen, T., "Automated sleep scoring in
+%       rats and mice using the naive Bayes classifier", Journal of Neuroscience
+%       Methods 202(1):60--64, 2011, doi 10.1016/j.jneumeth.2011.08.023. Reports 93%
+%       auto-rater agreement against 92% human inter-rater agreement -- a useful data
+%       point for the ceiling argument in the physiology subsection. Confirm the
+%       record at the publisher before adding; I confirmed it from indexed reference
+%       listings rather than by opening the article page.
+%
+% E6. WHAT THIS DRAFT ASSUMES HAS ALREADY BEEN DELETED ELSEWHERE IN THE PAPER
+%     (REVISION_PLAN A2). If any of these survive, the paper will contradict itself:
+%       line 129  "state-of-the-art 91.5% accuracy" and "by adding cross-frequency
+%                 coupling and the MMD feature"
+%       line 142  "mitigates (ii) through boosting's inherent feature subsampling"
+%       line 253  "The evaluation framework prioritized models demonstrating consistent
+%                 performance across different animals..."
+%       line 303  "significantly" (no test was run)
+%       line 361  "Although our framework delivers state-of-the-art performance..."
+%       line 379  "The robust performance across all vigilance states, particularly
+%                 challenging REM sleep detection..."
+%       line 189  "custom" and line 201 "novel" on MMD -- the descriptor is attributed
+%                 in the same sentence to the work that introduced it.
+%
+% =====================================================================================
+% PART F  --  COMPILE RESULT AND PAGE BUDGET  (measured, not estimated)
+% =====================================================================================
+%
+% F1. COMPILE STATUS. This file was compiled against the actual aaai2027.sty from
+%     AAAI_27_Rodent/, wrapped in the submission's own preamble, on 2026-07-26.
+%     pdflatex -halt-on-error: PASS. Second pass: zero undefined references (both
+%     \ref{sec:related} and \ref{sec:problem} resolve). The only warnings are
+%     undefined citations, which disappear once references.bib carries the eight new
+%     keys listed in E1. No new package is required.
+%
+% F2. MEASURED LENGTH (words of body text, comments excluded):
+%       Introduction (incl. contributions list) .... 595 w   ~0.55 page
+%       Background and Related Work ................ 972 w   ~0.90 page
+%       Problem Formulation (5 displayed eqs) ...... 872 w   ~0.70 page
+%     Against the REVISION_PLAN A8.2 budget (Introduction 0.75, Related Work 0.60,
+%     Problem Setting as part of a 1.30-page Method section), the Introduction comes
+%     in UNDER budget and Related Work runs roughly 0.3 page OVER. That is a real
+%     overage and must be paid for somewhere.
+%
+% F3. IF SPACE IS TIGHT, CUT IN THIS ORDER. Each item is a clean excision that costs
+%     the least argument per line recovered:
+%       1. The optional positioning table in PART B (already commented out).      -0.30 pg
+%       2. "Evaluation Protocol and Generalization" subsection -> fold its two
+%          substantive sentences into the (ii) bullet of "What Is Missing".       -0.10 pg
+%       3. The "Metrics" paragraph of PART C -> move to Experimental Setup, where
+%          the reproducibility checklist expects formal metric definitions anyway. -0.12 pg
+%       4. "End-to-End Deep Scorers" -> compress to two sentences; only the
+%          SlumberNet figure and the multi-modal/GPU trade-off are load-bearing.  -0.08 pg
+%     Do NOT recover space by cutting: the Eq. (4) two-risks paragraph (it is the
+%     entire justification for the paper's honest scope statement), the
+%     \citet{smith2025_ratlstm} positioning paragraph (that is the closest prior work
+%     and omitting it is the single most likely reviewer objection), or any
+%     contributions bullet.

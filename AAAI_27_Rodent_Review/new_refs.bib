@@ -1,0 +1,114 @@
+% =====================================================================
+% new_refs.bib  --  NEW BIBLIOGRAPHY ENTRIES FOR THE METHODS FORMALIZATION
+%
+% Every entry below was verified during this session against a publisher
+% record, PubMed, ADS, or Semantic Scholar. Verification notes are given
+% inline. Append these to AAAI_27_Rodent/references.bib.
+%
+% NOTHING IN THIS FILE IS A GUESS. If an entry is not listed here, it was
+% not verified and must not be added.
+% =====================================================================
+
+
+% ---------------------------------------------------------------------
+% (c) Hjorth parameters -- REQUIRED by the Hjorth subsection.
+% VERIFIED: PubMed 4195653; ScienceDirect PII 0013469470901434
+% (Electroencephalogr Clin Neurophysiol, Vol. 29, Issue 3, Sept. 1970,
+% pp. 306-310); Semantic Scholar record
+% d4f0dd763956cdab201df6a9c1dc5f65128631f7. This is the paper that
+% introduced Activity, Mobility and Complexity.
+% ---------------------------------------------------------------------
+@article{hjorth1970,
+  author  = {Hjorth, Bo},
+  title   = {{EEG} Analysis Based on Time Domain Properties},
+  journal = {Electroencephalography and Clinical Neurophysiology},
+  volume  = {29},
+  number  = {3},
+  pages   = {306--310},
+  year    = {1970},
+  doi     = {10.1016/0013-4694(70)90143-4}
+}
+
+
+% ---------------------------------------------------------------------
+% (b) Welch's method -- REQUIRED by the spectral-features subsection,
+% which currently says only "Welch's method with appropriate windowing"
+% and cites nothing.
+% VERIFIED: ADS 1967ITAE...15...70W; Semantic Scholar
+% e63345b4243e2376720a4e66373fdffe7a7d6be0. IEEE Trans. Audio
+% Electroacoust. 15(2):70-73, 1967, doi 10.1109/TAU.1967.1161901.
+% ---------------------------------------------------------------------
+@article{welch1967,
+  author  = {Welch, Peter D.},
+  title   = {The Use of Fast {F}ourier Transform for the Estimation of Power
+             Spectra: A Method Based on Time Averaging Over Short, Modified
+             Periodograms},
+  journal = {IEEE Transactions on Audio and Electroacoustics},
+  volume  = {15},
+  number  = {2},
+  pages   = {70--73},
+  year    = {1967},
+  doi     = {10.1109/TAU.1967.1161901}
+}
+
+
+% ---------------------------------------------------------------------
+% (d) Cross-frequency coupling.
+% USE THESE ONLY IF THE PIPELINE ACTUALLY COMPUTES A COUPLING QUANTITY
+% (see prerequisite P1 in the revision plan, section 6.1). They are
+% method references for the two standard phase--amplitude estimators;
+% citing them does not by itself make the abstract's CFC claim true.
+%
+% VERIFIED (Tort et al.): journals.physiology.org/doi/full/10.1152/
+% jn.00106.2010; J Neurophysiol 104(2):1195-1210, 2010. This is the
+% paper that defines the Kullback-Leibler-based Modulation Index.
+% ---------------------------------------------------------------------
+@article{tort2010,
+  author  = {Tort, Adriano B. L. and Komorowski, Robert and
+             Eichenbaum, Howard and Kopell, Nancy},
+  title   = {Measuring Phase-Amplitude Coupling Between Neuronal Oscillations
+             of Different Frequencies},
+  journal = {Journal of Neurophysiology},
+  volume  = {104},
+  number  = {2},
+  pages   = {1195--1210},
+  year    = {2010},
+  doi     = {10.1152/jn.00106.2010}
+}
+
+% VERIFIED: cell.com/cognitive-sciences/abstract/S1364-6613(10)00206-8;
+% Trends in Cognitive Sciences 14(11):506-515, 2010,
+% doi 10.1016/j.tics.2010.09.001. Review; source of the mean-vector-length
+% framing of phase-amplitude coupling.
+@article{canolty2010,
+  author  = {Canolty, Ryan T. and Knight, Robert T.},
+  title   = {The Functional Role of Cross-Frequency Coupling},
+  journal = {Trends in Cognitive Sciences},
+  volume  = {14},
+  number  = {11},
+  pages   = {506--515},
+  year    = {2010},
+  doi     = {10.1016/j.tics.2010.09.001}
+}
+
+
+% ---------------------------------------------------------------------
+% ALREADY IN references.bib -- listed here only so the drafting agent
+% knows these keys resolve and do not need to be added:
+%   Chen_2016    (XGBoost, KDD 2016)
+%   e18090272    (Aboalayon, Faezipour, Almuhammadi, Moslehpour,
+%                 Entropy 18(9):272, 2016 -- the MMD source)
+% ---------------------------------------------------------------------
+
+
+% ---------------------------------------------------------------------
+% NOT ADDED, AND WHY
+%
+% - Spectral entropy: no citation is included. The normalized Shannon
+%   entropy of a power spectrum is standard and is defined in full in the
+%   text; I did not verify a specific originating reference, so none is
+%   cited rather than risk a wrong attribution.
+% - Hilbert-transform analytic-signal references: same reasoning.
+% - Inouye et al. (spectral entropy), Rosenblum/Pikovsky (phase locking
+%   value): NOT verified this session. Do not cite them on my word.
+% ---------------------------------------------------------------------
