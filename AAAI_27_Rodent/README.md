@@ -9,13 +9,19 @@ using the official style files in `../AAAI_27/`.
 | File | Purpose |
 | --- | --- |
 | `AnonymousSubmission2027.tex` | Main source (AAAI-27 anonymous submission) |
-| `AnonymousSubmission2027.pdf` | Compiled paper (6 pages: 5.5 body + references) |
+| `AnonymousSubmission2027.pdf` | Compiled paper (6 pages: ~5.3 body, references start partway down p. 6) |
 | `ReproducibilityChecklist.tex` | AAAI reproducibility checklist, filled in — compiled **standalone**, not `\input` into the paper |
 | `ReproducibilityChecklist.pdf` | Compiled checklist (2 pages), uploaded separately from the paper |
 | `references.bib` | Bibliography, reformatted for author–year (natbib + `aaai2027.bst`) |
 | `aaai2027.sty`, `aaai2027.bst` | Official AAAI-27 style files (unmodified) |
 | `images/` | Figures (feature importance, SHAP, calibration curve) |
 | `AnonymousSubmission2027.bbl` | Pre-built bibliography, for submission sites that do not run BibTeX |
+| `README.md` | This file — **working notes, do not upload with the submission** |
+
+> **Do not include `README.md` in the submitted archive.** It documents the conversion
+> and lists unresolved discrepancies in the results; it is for you, not for reviewers.
+> Note also that the zip nests everything under a top-level `AAAI_27_Rodent/` folder —
+> check whether your submission site wants a flat archive.
 
 ## Building
 
@@ -34,10 +40,14 @@ PDFLaTeX is required — `aaai2027.sty` refuses XeLaTeX and LuaLaTeX.
 ## What changed relative to the IEEE version
 
 - **Class and preamble.** `IEEEtran` (conference) → `article` + `\usepackage[submission]{aaai2027}`.
-  All AAAI "DO NOT CHANGE" preamble lines are preserved verbatim from the template.
-  Removed `cite`, `textcomp`, `xcolor`, `adjustbox`, and the duplicate `graphicx`/`amsmath`
-  loads; kept `amsmath`/`amssymb`, `enumitem`, `booktabs`, `tikz`, and `pgfplots`.
-  None of the AAAI-forbidden packages are used.
+  Nine of the ten AAAI "DO NOT CHANGE" preamble lines are preserved byte-identically.
+  The tenth, `\DeclareCaptionStyle{ruled}{...}`, was dropped together with the `listings`
+  block that the template itself says to remove when the paper has no listings.
+  Removed from the IEEE preamble: `cite`, `textcomp`, `xcolor`, `adjustbox`, `algorithmic`,
+  `pgfplotstable`, and the duplicate `graphicx`/`amsmath` loads. Kept: `amsmath`/`amssymb`,
+  `enumitem`, `tikz`, `pgfplots`. Added: `booktabs`, from the AAAI template's own
+  "recommended for better-looking tables" block. A `\listfiles` build confirms none of the
+  AAAI-forbidden packages are loaded, directly or transitively.
 - **Title block.** `\IEEEauthorblockN`/`\IEEEauthorblockA` → AAAI `\author`/`\affiliations`.
   The `[submission]` option renders these as "Anonymous submission" automatically and
   swaps the copyright line for the AAAI anonymized-submission notice.
