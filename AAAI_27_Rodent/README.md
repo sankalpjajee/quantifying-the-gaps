@@ -9,8 +9,9 @@ using the official style files in `../AAAI_27/`.
 | File | Purpose |
 | --- | --- |
 | `AnonymousSubmission2027.tex` | Main source (AAAI-27 anonymous submission) |
-| `AnonymousSubmission2027.pdf` | Compiled PDF (8 pages: 6 paper + references + checklist) |
-| `ReproducibilityChecklist.tex` | AAAI reproducibility checklist, filled in and `\input` by the main file |
+| `AnonymousSubmission2027.pdf` | Compiled paper (6 pages: 5.5 body + references) |
+| `ReproducibilityChecklist.tex` | AAAI reproducibility checklist, filled in — compiled **standalone**, not `\input` into the paper |
+| `ReproducibilityChecklist.pdf` | Compiled checklist (2 pages), uploaded separately from the paper |
 | `references.bib` | Bibliography, reformatted for author–year (natbib + `aaai2027.bst`) |
 | `aaai2027.sty`, `aaai2027.bst` | Official AAAI-27 style files (unmodified) |
 | `images/` | Figures (feature importance, SHAP, calibration curve) |
@@ -23,6 +24,9 @@ pdflatex AnonymousSubmission2027
 bibtex   AnonymousSubmission2027
 pdflatex AnonymousSubmission2027
 pdflatex AnonymousSubmission2027
+
+pdflatex ReproducibilityChecklist    # separate 2-page PDF, run twice
+pdflatex ReproducibilityChecklist
 ```
 
 PDFLaTeX is required — `aaai2027.sty` refuses XeLaTeX and LuaLaTeX.
@@ -58,7 +62,10 @@ PDFLaTeX is required — `aaai2027.sty` refuses XeLaTeX and LuaLaTeX.
   LaTeX equivalents so the source compiles with plain PDFLaTeX.
 - **Abstract footnote.** The `\footnote` inside the abstract (code repository) was
   inlined — footnotes in the abstract are not permitted by the AAAI template.
-- **Reproducibility checklist.** Added and filled in, `\input` before `\end{document}`.
+- **Reproducibility checklist.** Added and filled in. It is compiled as a **standalone
+  document** and submitted as a separate file, which is what AAAI-27 asks for — the
+  `\input{ReproducibilityChecklist.tex}` line in the main file is left commented out, as
+  in the official template. Uncomment it only if your track wants the checklist inline.
 
 Results, numbers, figures, and claims are unchanged from the IEEE version.
 

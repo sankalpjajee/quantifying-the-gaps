@@ -380,7 +380,10 @@ The automated framework addresses critical limitations of manual scoring by elim
 
 \bibliography{references}
 
-% AAAI requires the reproducibility checklist to be included in the submission.
-\input{ReproducibilityChecklist.tex}
+% Check whether the conference requires a reproducibility checklist to be included in the paper.
+% AAAI-27 collects it as a separate file, so ReproducibilityChecklist.tex is compiled
+% standalone (see ReproducibilityChecklist.pdf). If your track asks for it inline instead,
+% uncomment the following line.
+% \input{ReproducibilityChecklist.tex}
 
 \end{document}
