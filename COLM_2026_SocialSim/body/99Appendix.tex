@@ -1,0 +1,959 @@
+\section{Extend Related Work}
+
+\paragraph{Persona datasets.} Persona-grounded modeling has evolved from small manually written profiles such as PersonaChat~\citep{zhang2018personachat} to large-scale synthetic persona datasets. Recent efforts have generated millions to billions of personas from web data, demographic priors, and LLM synthesis, including Persona-Hub~\citep{ge2024personahub}, NVIDIA Nemotron-Personas~\citep{nvidia2025nemotron}, and DeepPersona~\citep{deeppersona2025}. Parallel work has developed methods for persona-conditioned dialogue and behavior generation through synthetic data and instruction tuning~\citep{jandaghi2023syntheticpersonachat,wang2025opencharacter,wang2023selfinstruct}. 
+
+\paragraph{Persona simulation and evaluation.} Persona-grounded agents have enabled increasingly realistic simulations through frameworks such as Concordia~\citep{vezhnevets2023concordia}, OASIS~\citep{yang2024oasis}, TinyTroupe~\citep{microsoft2024tinytroupe}, and AI Town~\citep{a16z2023aitown}. Parallel work evaluates whether agents faithfully follow assigned personas using benchmarks such as PersonaGym, CharacterEval, SimBench, and $\tau$-bench~\citep{samuel2024personagym,tu2024charactereval,simbench2025,yao2024taubench}. Our work is complementary to these efforts by providing a modular simulation platform that conditions recommendation agents on arbitrary persona profiles, enabling systematic evaluation across diverse personas and applications.
+
+
+\paragraph{Applications: survey, chatbot, and web.} Persona agents are increasingly deployed as proxies for human respondents. In the \emph{survey} setting, an agent reads a stimulus and returns structured feedback: large-scale replications find that LLMs recover 73--81\% of main effects from human experiments, albeit with inflated effect sizes and weaker fidelity on sensitive topics~\citep{Cui+2024}. In the \emph{chatbot} setting, an agent converses with a target system and evaluates it, most developed for conversational recommendation: off-the-shelf LLMs are strong zero-shot recommenders~\citep{He+2023}, and the central shift is toward interactive, simulator-driven evaluation, since static single-turn protocols substantially underestimate quality~\citep{Wang+2023} and simulators exhibit failure modes such as popularity bias~\citep{Yoon+2024}. In the \emph{web} setting, agents probe products and interfaces before any human study, generating thousands of testers for live websites~\citep{Lu+2025a}, populating prototype social spaces~\citep{Park+2022}, and running A/B tests on real shopping interfaces~\citep{Lu+2025b}.
+
+\section{\method Construction Details}
+\label[appendix]{app:construction}
+
+This appendix documents how the \method demo is built: the persona corpus and
+how applications are matched to personas (\autoref{app:personas}), the simulated
+user exposed by the Persona API (\autoref{app:simulator}), the three task adapters
+and their interaction protocols (\autoref{app:adapters}), and the models and run
+settings behind the results in 5 (\autoref{app:settings}). 
+
+\subsection{Persona Corpus and Selection}
+\label[appendix]{app:personas}
+
+\method treats a persona as a fixed, self-contained description of one user.
+Personas are drawn from existing datasets rather than authored per task, so the
+same population can be reused across applications. The demo bundles 336 curated
+profiles from four sources (Nemotron-Personas-USA, PersonaHub, PRIMEX, and
+OASIS \citep{nvidia2025nemotron, ge2024personahub, appleprimex, yang2024oasis}); the runs reported in \autoref{sec:results} use the Nemotron-Personas-USA subset. Each
+profile is a structured record --- demographics, a set of facet narratives (for
+example professional, culinary, and social facets), a free-text background, and
+explicit attribute lists --- that the loader renders into a single humanized
+text block (Box~\ref{box:persona}). 
+
+\paragraph{Selection.} For each application we embed its short description and
+rank personas by similarity between that description and each profile, keeping
+the 50 nearest. This approximates recruiting users whose background matches the
+application, and gives every application a 50-persona test set without manual
+curation.
+
+\begin{promptbox}[label={box:persona}]{Persona profile record (rendered to one text block)}
+\begin{lstlisting}
+id: <hash>                 source: Nemotron      # Nemotron | PersonaHub | PRIMEX | OASIS
+demographics:
+  age, gender, marital_status, education_level, occupation
+  location: { city, state, country, zipcode }
+personas:                  # facet narratives, a few sentences each
+  professional, sports, arts, travel, culinary, core
+background:                # free-text life context (e.g. cultural)
+attributes:
+  skills: [...], hobbies: [...], career_goals: ...
+
+# The loader humanizes the keys and renders the record into ONE text block,
+# used both in the persona drawer and verbatim as the {persona_profile} below.
+\end{lstlisting}
+\end{promptbox}
+
+\subsection{Simulated User (Persona API)}
+\label[appendix]{app:simulator}
+
+The Persona API wraps a single language model as one simulated user. Its system
+prompt composes the application context, a short description of the application
+under test, and the rendered persona block; a goal-context template then directs
+the user to (i) infer a realistic goal and the constraints or preferences that
+matter to it, (ii) reveal those needs gradually rather than all at once,
+(iii) react to the application by confirming, pushing back, or asking for
+clarification, and (iv) keep messages short (one to three sentences).
+Box~\ref{box:sysprompt} gives the template. The model emits strict JSON at every
+step (JSON-object decoding, temperature 0.7), and the same persona-conditioned
+instance later completes the post-interaction form in character, so the
+evaluation reflects the assigned user's point of view rather than an external
+judge.
+
+\begin{promptbox}[label={box:sysprompt}]{Simulated-user system prompt}
+\begin{lstlisting}
+You are a real user of this interactive application.
+
+Application context: {domain}
+
+{application_description}
+
+Your assigned persona (stay in character at all times):
+{persona_profile}
+
+Based on your assigned persona, first decide what realistic goal you want to
+accomplish with this application and what constraints or preferences matter
+most to you. Then behave like a genuine human user:
+- Do NOT reveal everything at once: share your needs gradually, as a real
+  person would, and answer the agent's follow-up questions naturally.
+- React to the application's responses: if they fit your needs, say so; if
+  not, push back, refine, or ask for clarification.
+- Keep messages short and conversational (1-3 sentences).
+\end{lstlisting}
+\end{promptbox}
+
+\subsection{Interaction Protocols and Task Adapters}
+\label[appendix]{app:adapters}
+
+Each application is wrapped as a task that fixes an interaction protocol, an
+interface, and an evaluation form. The persona side is shared by all tasks, while
+the adapter differs across survey, chatbot, and web applications. All JSON
+schema field names below use camelCase; fixed identifiers such as survey question
+ids, application keys, product ids, and option ids are treated as data values and
+are kept as written.
+
+\paragraph{Survey.}
+The protocol is a single survey submission. The simulated user receives a market
+research instrument and returns one JSON object with answers, rationales,
+confidence scores, and a trajectory. The evaluation is the completed survey
+itself plus validation checks.
+
+\begin{promptbox}[label={box:survey-task}]{Survey adapter: task prompt}
+\begin{lstlisting}
+You are completing a market research survey.
+
+Read the survey context and answer each question as the assigned persona.
+Return one JSON object.
+
+Survey context:
+{
+  "instrumentId": "<instrument id>",
+  "title": "<survey title>",
+  "concept": "<survey concept>",
+  "questions": [ ... ]
+}
+\end{lstlisting}
+\end{promptbox}
+
+\begin{promptbox}[label={box:survey-schema}]{Survey adapter: response schema and validation}
+\begin{lstlisting}
+# Response schema
+{
+  "instrument": {
+    "instrumentId": "<instrument id>",
+    "title": "<survey title>"
+  },
+  "answers": [
+    {
+      "questionId": "<question id>",
+      "answerValue": "<likert number, choice string/list, or free text>",
+      "answerRationale": "<short persona-grounded reason>",
+      "confidence": 0.0
+    }
+  ],
+  "trajectory": [
+    {
+      "timestamp": "2026-06-24T00:00:00Z",
+      "actor": "user",
+      "eventType": "answerQuestion",
+      "context": {
+        "questionId": "<question id>"
+      },
+      "outcome": {
+        "questionId": "<question id>",
+        "answerValue": 4
+      }
+    }
+  ]
+}
+
+# Validation
+- all required questions are answered
+- question ids are valid
+- Likert values are within the valid range
+- choice values match the allowed options
+- free-text answers are non-empty
+- trajectory contains started, ask, answer, and completed events
+- summary metrics include numQuestions, numAnswered, and meanLikert
+\end{lstlisting}
+\end{promptbox}
+
+\begin{promptbox}[label={box:survey-instruments}]{Survey adapter: demo instruments}
+\begin{lstlisting}
+# Instrument 1
+instrumentId: chatgpt_images_market_research_v1
+title: ChatGPT Images Market Research Survey
+concept: ChatGPT image generation and editing
+questions:
+  - questionId: trial_intent
+    questionType: likert
+    scale: 1-5
+    prompt: likelihood of using ChatGPT to create or edit images
+
+  - questionId: most_useful_task
+    questionType: singleChoice
+    options:
+      - creating_social_media_images
+      - editing_or_fixing_photos
+      - making_presentations_or_posters
+      - brainstorming_visual_ideas
+      - none_of_these
+
+  - questionId: adoption_barrier
+    questionType: singleChoice
+    options:
+      - image_does_not_match_my_request
+      - concerns_about_photo_privacy
+      - hard_to_get_realistic_results
+      - prefer_existing_design_tools
+      - not_sure_when_to_use_it
+
+  - questionId: regular_use_trigger
+    questionType: freeText
+
+
+# Instrument 2
+instrumentId: instagram_reels_market_research_v1
+title: Instagram Reels Market Research Survey
+concept: short-video watching, creating, and discovery
+questions:
+  - questionId: watch_intent
+    questionType: likert
+    scale: 1-5
+    prompt: likelihood of watching Reels during a normal Instagram visit
+
+  - questionId: content_pull
+    questionType: singleChoice
+    options:
+      - funny_or_entertaining_videos
+      - friends_or_creators_i_follow
+      - how_to_or_learning_content
+      - news_trends_or_pop_culture
+      - shopping_or_product_discovery
+      - none_of_these
+
+  - questionId: usage_barrier
+    questionType: singleChoice
+    options:
+      - too_many_ads
+      - irrelevant_recommendations
+      - too_addictive_or_time_wasting
+      - low_quality_content
+      - privacy_or_tracking_concerns
+
+  - questionId: improvement_request
+    questionType: freeText
+
+
+# Instrument 3
+instrumentId: nike_air_max_dn_market_research_v1
+title: Nike Air Max Dn Market Research Survey
+concept: Nike Air Max Dn and Dynamic Air cushioning
+questions:
+  - questionId: try_on_intent
+    questionType: likert
+    scale: 1-5
+    prompt: likelihood of trying it on in store
+
+  - questionId: purchase_driver
+    questionType: singleChoice
+    options:
+      - comfort
+      - style
+      - price
+      - brand_reputation
+      - durability
+
+  - questionId: adoption_barrier
+    questionType: singleChoice
+    options:
+      - too_expensive
+      - not_my_style
+      - unsure_about_comfort
+      - already_have_similar_shoes
+      - prefer_other_brands
+
+  - questionId: proof_needed
+    questionType: freeText
+\end{lstlisting}
+\end{promptbox}
+
+\paragraph{Chatbot.}
+The protocol is a multi-turn conversation. The simulated user receives a chatbot
+description, forms a realistic goal based on the assigned persona, reveals needs
+gradually, answers follow-up questions, and stops when they can judge whether the
+chatbot satisfied the need. The recommendation tasks
+use RecAI and InteRecAgent~\citep{huang2023recommender,lian2024recai}; the
+finance task uses OpenBB~\citep{openbb,openbbmcp}; and the medical task uses a
+multi-agent medical assistant~\citep{majumder2025medicalassistant}.
+
+\begin{promptbox}[label={box:chat-task}]{Chatbot adapter: task prompt}
+\begin{lstlisting}
+You are a user of a <systemLabel>.
+
+System description:
+<systemDescription>
+
+Context for this interaction:
+Based on your assigned persona, silently decide what you realistically
+want from this system and which constraints or preferences matter to you.
+Start the conversation naturally. Do not reveal everything at once.
+Let the system ask follow-up questions, answer in character, and give
+feedback when a response does not fit. Continue until you can judge
+whether the system satisfied your need.
+\end{lstlisting}
+\end{promptbox}
+
+\begin{promptbox}[label={box:chat-schema}]{Chatbot adapter: next-turn schema and key rules}
+\begin{lstlisting}
+# Next-turn response schema
+{
+  "message": "string|null",
+  "done": "boolean",
+  "doneReason": "string|null"
+}
+
+# Key rules
+- stay in character
+- decide a realistic need from the assigned persona
+- reveal preferences gradually
+- set done=true only when the user need is already satisfied
+- if continuing, keep the message short and natural
+\end{lstlisting}
+\end{promptbox}
+
+\begin{promptbox}[label={box:chat-eval}]{Chatbot adapter: evaluation form}
+\begin{lstlisting}
+# Post-interaction evaluation form
+{
+  "constraintSatisfaction":
+    "<1-5 score for how well the user's need and constraints were met>",
+  "constraintRationale":
+    "<short reason>",
+
+  "preferenceSatisfaction":
+    "<1-5 score for how well personal preferences were met>",
+  "preferenceRationale":
+    "<short reason>",
+
+  "overallRating":
+    "<integer score on the task-specific rating scale>",
+  "ratingReason":
+    "<short reason for the rating>",
+
+  "clarificationUseful":
+    "<true|false>",
+  "clarificationRationale":
+    "<which questions were useful, or why not>"
+}
+\end{lstlisting}
+\end{promptbox}
+
+The finance and medical tasks currently use the same shared chatbot evaluation
+form rather than separate domain-specific scoring fields. The system descriptions
+used by the chatbot adapter are listed below.
+
+\begin{promptbox}[label={box:chat-apps}]{Chatbot adapter: applications under test}
+\begin{lstlisting}
+# Movie recommendation
+applicationKey: recai:movie
+systemLabel: movie recommendation chatbot
+systemDescription:
+  A conversational movie recommender that asks about tastes and constraints,
+  searches a film catalog, and suggests movies.
+
+# Beauty recommendation
+applicationKey: recai:beauty_product
+systemLabel: beauty product recommendation chatbot
+systemDescription:
+  A beauty and personal-care recommender that asks about needs, skin type,
+  budget, and preferences, then searches a beauty catalog.
+
+# Financial research
+applicationKey: finance_openbb:financial_research
+systemLabel: financial research chatbot
+systemDescription:
+  A financial research chatbot that asks about objectives, risk, time horizon,
+  tickers, funds, sectors, or macro topics. It uses OpenBB and avoids
+  personalized buy or sell instructions.
+
+# Medical consultation
+applicationKey: medical_assistant:medical_consultation
+systemLabel: medical assistant chatbot
+systemDescription:
+  A medical assistant chatbot that asks about symptoms, duration, severity,
+  medications, history, and red flags. It gives general health and triage
+  guidance and does not replace a clinician.
+\end{lstlisting}
+\end{promptbox}
+
+\paragraph{Web.}
+The protocol is a browser-based interaction. The simulated user receives a
+website description, states a concrete closed-loop task, navigates the WebArena
+ecommerce site~\citep{zhou2024webarena}, compares options when possible,
+completes sandbox checkout, and evaluates the experience. The controller records
+browser actions and screenshots when available.
+
+\begin{promptbox}[label={box:web-task}]{Web adapter: task prompt}
+\begin{lstlisting}
+You are testing a website application.
+
+Website:
+{
+  "websiteName": "Northstar Home Goods",
+  "websiteUrl": "<sandbox web app URL>"
+}
+
+Before using the site, state the concrete website task you will perform.
+Choose a realistic closed-loop task that fits your persona, such as finding,
+comparing, ordering, and confirming a product.
+
+Browse the website, compare at least two relevant options when possible,
+add one product to the cart, complete the sandbox checkout, and reach the
+order confirmation page. Do not use real payment details.
+
+Then evaluate the user experience from your persona's perspective.
+\end{lstlisting}
+\end{promptbox}
+
+\begin{promptbox}[label={box:web-eval}]{Web adapter: evaluation form and key rules}
+\begin{lstlisting}
+# Post-interaction evaluation form
+{
+  "goalCompleted": true,
+  "orderId": "<sandbox order id shown on confirmation page>",
+  "selectedProductId": "<product id shown on site>",
+  "selectedProductName": "<product name shown on site>",
+
+  "needSatisfaction": "<1-10 score>",
+  "easeOfUse": "<1-10 score>",
+  "informationQuality": "<1-10 score>",
+  "overallRating": "<1-10 score>",
+
+  "ratingReason":
+    "<why this product and order experience fit or did not fit your needs>"
+}
+
+# Key rules
+- scores are integers from 1 to 10
+- product id and product name must be grounded in the site catalog
+- order id must come from sandbox checkout
+- trace saves browser actions and screenshots when available
+\end{lstlisting}
+\end{promptbox}
+
+
+\subsection{Models, Hyperparameters, and Run Settings}
+\label{app:settings}
+
+The simulated user model is Claude Haiku 4.5 throughout~\citep{anthropic2025haiku45}. For chatbot tasks, the application model is GPT-4o mini~\citep{openai2024gpt4omini}. Decoding uses temperature 0.7 with JSON-object outputs. Each application is evaluated with 50 personas selected by similarity to the application description, and chatbot conversations are capped at eight turns.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Component} & \textbf{Setting} \\
+\midrule
+Simulated user model & Claude Haiku 4.5; temperature 0.7; JSON-object output \\
+Chatbot application model & GPT-4o mini \\
+Conversation turn cap & 8 turns \\
+Personas per application & 50, selected by similarity to the application description \\
+Recommendation catalogs & Movies and beauty products from RecAI-style catalogs \\
+Survey instruments & 4 items per survey: Likert, choice, and free text \\
+Web environment & WebArena ecommerce site in a sandbox browser environment \\
+\bottomrule
+\end{tabular}
+\caption{Models, hyperparameters, and run settings used by the reported \method runs.}
+\label{tab:settings}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+\section{Additional Results and Analysis}
+\label[appendix]{app:results}
+
+This appendix reports additional results for the six application entries used in the main analysis: one aggregated survey setting, four chatbot tasks, and one web task. The survey entry pools three survey instruments; for persona-level analysis, each persona's survey scores are averaged across the three instruments. Score metrics are normalized to $[0,1]$ in \autoref{fig:app-overall-metric-distributions} and \autoref{fig:app-interpersona-heatmaps} so that categories with different raw scales can be compared. Each case box gives a representative trace excerpt showing the user's goal, interaction behavior, evaluation, and persona-grounded signal.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\textwidth]{figures/fig_appendix_overall_metric_distributions.pdf}
+    \caption{
+    \textbf{Overall distributions across measured categories.}
+    Each panel shows normalized score distributions for one application entry. Survey points correspond to personas after averaging across the three survey instruments; chatbot and web points correspond to individual persona runs. Diamonds mark means.
+    }
+    \label{fig:app-overall-metric-distributions}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\textwidth]{figures/fig_appendix_interpersona_heatmaps.pdf}
+    \caption{
+    \textbf{Persona-group distributions across measured categories.}
+    Each panel shows one application entry. Rows are persona groups and columns are normalized evaluation categories. Survey groups are computed after averaging each persona across the three survey instruments.
+    }
+    \label{fig:app-interpersona-heatmaps}
+\end{figure*}
+
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabular}{@{}p{0.13\linewidth}p{0.10\linewidth}p{0.58\linewidth}p{0.13\linewidth}@{}}
+\toprule
+\textbf{Application} & \textbf{Runs} & \textbf{Aggregated evaluation metrics} & \textbf{Process metric} \\
+\midrule
+Survey & 50 personas / 150 runs & Likert 0.66$\pm$0.10; Complete 1.00$\pm$0.00; Schema 1.00$\pm$0.00; Trace 1.00$\pm$0.00; Persona 0.95$\pm$0.05; Task 0.97$\pm$0.04; SimQ 0.96$\pm$0.04 & response length 210$\pm$29 words \\
+\midrule
+Chatbot-Movie & 50 runs & Overall 0.60$\pm$0.25; Constraint 0.48$\pm$0.21; Preference 0.52$\pm$0.19; Clarify 0.30$\pm$0.46; Done 0.74$\pm$0.44; MaxTurn 0.26$\pm$0.44; Persona 1.00$\pm$0.03; Task 0.88$\pm$0.10; SimQ 0.94$\pm$0.05 & turns 6.6$\pm$1.2; grounded items 15.2$\pm$7.0 \\
+\midrule
+Chatbot-Beauty & 50 runs & Overall 0.59$\pm$0.25; Constraint 0.48$\pm$0.21; Preference 0.47$\pm$0.17; Clarify 0.36$\pm$0.48; Done 0.84$\pm$0.37; MaxTurn 0.16$\pm$0.37; Persona 0.96$\pm$0.08; Task 0.74$\pm$0.09; SimQ 0.85$\pm$0.06 & turns 6.1$\pm$1.2; grounded items 8.3$\pm$5.2 \\
+\midrule
+Chatbot-Finance & 50 runs & Overall 0.64$\pm$0.21; Constraint 0.52$\pm$0.15; Preference 0.53$\pm$0.17; Clarify 0.88$\pm$0.32; Done 0.08$\pm$0.27; MaxTurn 0.92$\pm$0.27; Persona 1.00$\pm$0.00; Task 1.00$\pm$0.00; SimQ 1.00$\pm$0.00 & turns 7.9$\pm$0.3; grounded items 28.6$\pm$29.6 \\
+\midrule
+Chatbot-Medical & 50 runs & Overall 0.57$\pm$0.17; Constraint 0.52$\pm$0.14; Preference 0.44$\pm$0.11; Clarify 0.06$\pm$0.24; Done 1.00$\pm$0.00; MaxTurn 0.00$\pm$0.00; Persona 0.92$\pm$0.11; Task 1.00$\pm$0.00; SimQ 0.96$\pm$0.06 & turns 5.2$\pm$1.2; grounded items 0.0$\pm$0.0 \\
+\midrule
+Web & 50 runs & Overall 0.79$\pm$0.03; Need 0.81$\pm$0.04; Ease 0.80$\pm$0.02; Info 0.72$\pm$0.04; Goal 1.00$\pm$0.00; Persona 1.00$\pm$0.03; Task 1.00$\pm$0.00; SimQ 1.00$\pm$0.01 & steps 3.0$\pm$0.0 \\
+\bottomrule
+\end{tabular}
+\caption{Aggregated evaluation results across measured categories. Values are mean $\pm$ standard deviation. Score metrics are normalized to $[0,1]$; process metrics are reported in their original units.}
+\label{tab:app-aggregate-metrics}
+\end{table*}
+
+\subsection{Survey}
+\label{app:survey-results}
+
+We aggregate three market-research instruments into one survey entry: ChatGPT Images, Instagram Reels, and Nike Air Max Dn. The main survey outcome is the normalized mean Likert score, while the remaining categories measure answer completeness, schema validity, trace completeness, response length, persona alignment, task grounding, and overall simulation quality.
+
+\begin{promptbox}[label={box:trace-survey}]{Survey trace example: Nike Air Max Dn}
+\begin{lstlisting}
+Persona context:
+A secondary school teacher from the Bronx who jogs regularly and plays
+weekly basketball.
+
+Task:
+Answer a market research survey about Nike Air Max Dn and Dynamic Air
+cushioning.
+
+Survey answers:
+- try_on_intent = 4/5
+  Rationale: The user is curious about performance footwear because they
+  jog regularly and play basketball, but would still want to test comfort
+  and fit before buying.
+
+- purchase_driver = comfort
+  Rationale: Comfort is non-negotiable for running and basketball. Style
+  matters, but function comes first for athletic wear.
+
+- adoption_barrier = too_expensive
+  Rationale: Premium Nike pricing is a real constraint for a secondary
+  school teacher with a moderate income and existing functional shoes.
+
+- proof_needed = free text
+  The user asks for independent testing data on Dynamic Air cushioning,
+  comparisons with other premium cushioning systems, and real user reviews
+  from runners and athletes.
+
+Trace signal:
+The response connects product interest to athletic use, budget constraints,
+and evidence-seeking behavior, showing persona-aligned survey feedback.
+\end{lstlisting}
+\end{promptbox}
+
+\subsection{Chatbot: Movie Recommendation}
+\label{app:movie-results}
+
+\begin{promptbox}[label={box:trace-movie}]{Chatbot trace example: Movie recommendation}
+\begin{lstlisting}
+Persona context:
+A bilingual Korean-American actor interested in Bong Joon-ho,
+cross-cultural storytelling, code switching, and creative research for
+a web series.
+
+Opening user message:
+"Hey! I'm looking for some film recommendations, but I'm pretty specific
+about what I'm drawn to. I've been on a bit of a Bong Joon-ho kick lately,
+and I'm also really interested in stories that explore cross-cultural themes
+or have strong bilingual elements."
+
+Application response:
+The recommender suggests films including Entertaining Angels, I'm Not There,
+Brokeback Mountain, Naked Lunch, and Save The Green Planet!
+
+Later user clarification:
+"I'm specifically interested in films that center Korean-American voices and
+experiences, or at least have that perspective woven through authentically.
+For my web series, I need to study how filmmakers are actually telling those
+stories."
+
+Post-interaction self-report:
+- constraintSatisfaction = 1/5
+- preferenceSatisfaction = 2/5
+- overallRating = 2/7
+- ratingReason: The system kept returning generic or mismatched films and
+  eventually recommended off-base titles such as Lonesome Dove and The Bellboy.
+
+Trace signal:
+The user reveals preferences gradually and evaluates the recommender through
+Korean-American identity, bilingual dialogue, and creative research needs.
+\end{lstlisting}
+\end{promptbox}
+
+\subsection{Chatbot: Beauty Product Recommendation}
+\label{app:beauty-results}
+
+\begin{promptbox}[label={box:trace-beauty}]{Chatbot trace example: Beauty product recommendation}
+\begin{lstlisting}
+Persona context:
+A licensed nail artist with cosmetic chemistry interests, salon inventory
+responsibilities, and a preference for non-toxic professional products.
+
+Opening user message:
+"Hola! I'm looking for nail polish recommendations, but I have pretty specific
+needs. I've been experimenting with creating my own non-toxic formulas for the
+salon, and I'm getting frustrated with some of the commercial options out there.
+I need something that's actually clean, no harsh chemicals, but still gives me
+that vibrant color payoff I need for my designs."
+
+Application clarification:
+"Could you tell me more about the colors you prefer or any specific brands you
+have in mind? Also, do you have a price range for the nail polishes you're
+looking for?"
+
+User preference reveal:
+"I'm really drawn to deep, saturated jewel tones and earthy pigments, think
+rich teals, burnt oranges, deep crimsons inspired by Frida Kahlo's work."
+
+Application mismatch:
+The system recommends products such as OPI Lacquer Thinner, Seche Vite Dry Fast
+Top Coat, Zoya Remove Plus Nail Polish Remover, Harmony Gelish Gel Cleanser,
+and IBD Nail Wipes. These are accessories or removers rather than the requested
+nail polish colors.
+
+Post-interaction self-report:
+- constraintSatisfaction = 1/5
+- preferenceSatisfaction = 2/5
+- overallRating = 2/7
+- ratingReason: The system went in circles offering removers and top coats
+  instead of actual non-toxic jewel-tone polishes.
+
+Trace signal:
+The low rating is grounded in a salon professional's product need and a catalog
+that returns adjacent but incorrect products.
+\end{lstlisting}
+\end{promptbox}
+
+\subsection{Chatbot: Financial Research}
+\label{app:finance-results}
+
+\begin{promptbox}[label={box:trace-finance}]{Chatbot trace example: Financial research}
+\begin{lstlisting}
+Persona context:
+An accounting clerk with QuickBooks, Sage, Excel, reconciliation, and financial
+reporting experience.
+
+Opening user message:
+"I've been saving for a trip to Mexico, maybe Guanajuato or San Miguel de
+Allende, but I want to make sure I'm not missing out on any investment
+opportunities that could help my money grow while I'm saving. I work in
+accounting, so I understand spreadsheets."
+
+Application clarification:
+The assistant asks about travel timeline, target amount, risk comfort, and
+current account type.
+
+User parameters:
+The user gives an 18-24 month timeline, a $4,000-$5,000 goal, a regular savings
+account, and moderate risk tolerance. Later, the user narrows the task to a
+20-month horizon, XAGG, a 4% savings account rate, Nevada residency, a 12%
+federal tax bracket, and a 50/50 split between XAGG and high-yield savings.
+
+Application response:
+The assistant provides ETF options and comparison details earlier in the
+conversation, then asks for more assumptions about dividend reinvestment,
+savings compounding, and capital gains treatment before producing the requested
+after-tax projection.
+
+Post-interaction self-report:
+- constraintSatisfaction = 3/5
+- preferenceSatisfaction = 2/5
+- overallRating = 4/7
+- ratingReason: The user gave concrete parameters and expected an after-tax
+  projection, but the assistant kept asking for additional assumptions instead
+  of calculating the side-by-side result.
+
+Trace signal:
+The critique is consistent with an accounting persona: the user wants numbers,
+after-tax treatment, and a concrete projection rather than a broad framework.
+\end{lstlisting}
+\end{promptbox}
+
+\subsection{Chatbot: Medical Consultation}
+\label{app:medical-results}
+
+\begin{promptbox}[label={box:trace-medical}]{Chatbot trace example: Medical consultation}
+\begin{lstlisting}
+Persona context:
+A medical assistant and clinical technician who works with phlebotomy,
+patient triage, and clinic workflows.
+
+Opening user message:
+"I've been feeling pretty worn out lately, especially after my shifts at the
+clinic. I'll finish up a day of phlebotomy and patient triage, and I'm just
+completely drained, way more than usual. I'm wondering if it's just burnout
+or if there's something else going on."
+
+Later user details:
+The user says an Arduino heart-rate monitor shows elevated resting rates,
+basketball recovery is slower, sleep is disrupted, and coffee intake has
+increased.
+
+Later user question:
+The user asks whether to mention fatigue and sleep issues to a clinic
+supervisor, especially because they hope to move into an LPN role.
+
+Post-interaction self-report:
+- constraintSatisfaction = 3/5
+- preferenceSatisfaction = 2/5
+- overallRating = 5/7
+- ratingReason: The chatbot was safe and responsible, but felt like a template.
+  The user expected follow-up about shift patterns, overnight phlebotomy draws,
+  and whether the fatigue started around a specific event.
+
+Trace signal:
+The critique is grounded in clinical workflow, health self-monitoring, and
+career concerns, rather than a generic health complaint.
+\end{lstlisting}
+\end{promptbox}
+
+\subsection{Web: Ecommerce Checkout}
+\label{app:web-results}
+
+\begin{promptbox}[label={box:trace-web}]{Web trace example: WebArena ecommerce checkout}
+\begin{lstlisting}
+Persona context:
+A retail supervisor with visual merchandising, POS analytics, customer flow,
+and workspace organization experience.
+
+Website task:
+"As a retail supervisor with a keen eye for visual merchandising and workspace
+optimization, I'm looking to upgrade my home office setup with a quality desk
+that supports both my work-from-home administrative tasks and my creative
+pursuits."
+
+Browser trace:
+Step 1:
+The user reviews the Northstar Home Goods catalog and identifies two desk
+options in the Home office category: ModDesk Compact at $249 with a 4.3-star
+rating and FocusDesk Pro at $429 with a 4.8-star rating.
+
+Step 2:
+The user compares the two desks. ModDesk Compact is budget-friendly with basic
+cable slots and limited storage. FocusDesk Pro offers adjustable height, drawer
+storage, cable routing, and a scratch-resistant top.
+
+Step 3:
+The user selects FocusDesk Pro, product id desk-002, because it supports both
+administrative work and art supplies.
+
+Step 4:
+The user completes sandbox checkout and reaches an order confirmation page.
+
+Final evaluation:
+- needSatisfaction = 8/10
+- easeOfUse = 8/10
+- informationQuality = 7/10
+- overallRating = 8/10
+- ratingReason: The catalog layout is clean and easy to navigate, similar to how
+  the persona would design a retail floor, but the page could provide more
+  specifications such as weight capacity, material composition, and assembly time.
+
+Trace signal:
+The selected product and critique are grounded in both the ecommerce task state
+and the retail-supervisor persona.
+\end{lstlisting}
+\end{promptbox}
+
+\paragraph{Summary.}
+The aggregate distributions and case traces show two complementary patterns. Persona alignment remains high across the evaluated applications, and the representative traces show that personas influence goals, constraints, critiques, and final evaluations. Outcome diversity depends on the application interface and backend: survey and web tasks produce more concentrated scores, while multi-turn chatbot tasks show broader variation because users can reveal constraints, negotiate responses, and stop with different levels of satisfaction.
+
+
+
+
+% \section{Additional Results and Analysis}
+% \label{app:results}
+
+% This appendix expands the results in \autoref{sec:results}: the score normalization used
+% throughout \autoref{fig:results-components} and \autoref{fig:beauty-groups} (\autoref{app:norm}), the simulation-robustness metri
+% in \autoref{fig:results-components} (\autoref{app:robustness}), and the persona-diversity analysis (\autoref{app:diversity}).
+
+% \subsection{Score Normalization}
+% \label{app:norm}
+
+% Self-report scores come from heterogeneous scales, so \autoref{fig:within-clusters} and \autoref{fig:results-components} report them
+% min--max normalized to $[0,1]$. The chatbot overall rating maps from $[1,10]$ as
+% $(r-1)/9$; the 1--5 constraint- and preference-satisfaction items map as
+% $(x-1)/4$; and the binary clarifying-question indicator maps to $\{0,1\}$. Web
+% ratings (need satisfaction, ease of use, information quality, overall) use the
+% same $(x-1)/9$ map, and survey Likert items use $(x-1)/4$.
+% % TODO: confirm these mappings match the figure-generation script exactly
+% % (e.g. whether any score is divided by its max rather than min--max scaled).
+
+% \subsection{Simulation Robustness}
+% \label{app:robustness}
+
+% Beyond task outcomes, we check that each run is a valid simulation: the
+% simulated user stays in character and follows the protocol. \autoref{fig:results-components} reports
+% four per-run robustness metrics, each normalized to $[0,1]$ (Box~\ref{box:rubric}).
+% Persona fidelity is the central one: across applications, more than 87\% of runs
+% receive the maximum fidelity score and nearly all score at least $4/5$, with the
+% remaining lower-fidelity cases concentrated in the domains that demand the most
+% background knowledge (beauty and medical).
+
+% \begin{promptbox}[label={box:rubric}]{Per-run simulation-robustness rubric (Figure~3(c))}
+% \begin{lstlisting}
+% Each completed run is scored on four axes (ordinal scale, normalized to [0,1]):
+%   Exec.    Execution validity - the run completed the protocol with well-formed,
+%            in-schema user turns/actions and no unrecoverable errors.
+%   Persona  Persona fidelity - the user stayed consistent with the assigned
+%            background, role, and communication style throughout (1-5 scale).
+%   Task     Task coherence - the user pursued a realistic goal, revealed needs,
+%            reacted to responses, and reached a justified stopping decision.
+%   Overall  Holistic quality of the simulated interaction.
+
+% # TODO: paste the exact LLM-judge rubric/prompt and scale used for the reported
+% #       numbers. The released app does not commit a fidelity judge, so confirm
+% #       the per-axis scale (1-5 vs. pass/partial/fail) and the judge model.
+% \end{lstlisting}
+% \end{promptbox}
+
+
+\subsection{Persona Diversity}
+\label{app:diversity}
+
+We analyze whether the selected personas provide sufficient coverage for
+persona-driven simulation. For each application entry, we select 50
+application-relevant personas. The survey entry uses 50 personas evaluated
+across three survey instruments, while each chatbot and web entry uses 50
+personas for the corresponding application. We represent each persona by its
+demographics, background, attributes, and persona descriptions, encode the text
+with TF--IDF, and visualize the resulting vectors with truncated SVD. We study
+diversity at two levels: inter-domain diversity across application entries and
+intra-domain diversity within each application entry.
+
+\paragraph{Inter-domain diversity.}
+\autoref{fig:overall-diversity} shows the overall distribution of the selected
+personas across survey, chatbot, and web applications. The six application
+entries occupy heavily overlapping regions in the projected persona-text space.
+This indicates that the selected personas come from a shared broad population while still being
+relevant to each target application. This is useful for our setting because
+PersonaEval aims to compare how different applications respond to persona-driven
+users.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/fig1_overall_diversity.pdf}
+  \caption{
+  \textbf{Inter-domain diversity of selected personas.}
+  Each point is one selected persona, colored by application entry. Persona text
+  is encoded with TF--IDF and projected to two dimensions with truncated SVD.
+  Shaded ellipses show each entry's coverage region. The overlapping regions
+  indicate that selected personas remain broadly comparable across applications.
+  }
+  \label{fig:overall-diversity}
+\end{figure*}
+
+\paragraph{Intra-domain diversity.}
+\autoref{fig:within-diversity} shows that each application entry also contains
+substantial internal variation. The selected personas spread across multiple
+regions within each panel, and the mean pairwise distances are consistently high
+($\bar d \approx 0.82$--$0.83$). The projected radius varies by entry, with
+Chatbot-Beauty showing the largest $r_{90}$, suggesting especially broad
+coverage of beauty-related personas. These results show that each application is
+evaluated by a diverse set of users rather than a single collapsed persona type.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/fig2_within_domain_diversity.pdf}
+  \caption{
+  \textbf{Intra-domain diversity of selected personas.}
+  For each application entry, the 50 selected personas are encoded with TF--IDF
+  and projected to two dimensions with a domain-specific truncated SVD. Axes are
+  not comparable across panels. Point size is proportional to distance from the
+  domain centroid, so larger points indicate more distinctive personas. Each
+  panel reports the mean pairwise cosine distance $\bar d$ and the
+  90th-percentile projected radius $r_{90}$.
+  }
+  \label{fig:within-diversity}
+\end{figure*}
+
+To further inspect within-domain structure, we cluster the selected personas
+inside each application entry. As shown in \autoref{fig:within-clusters}, the
+clusters have low silhouette scores, ranging from 0.09 to 0.21, and their
+ellipses overlap substantially. This suggests that persona groups should be
+interpreted as soft thematic groups rather than cleanly separated classes. We
+therefore use these clusters only as descriptive groups in the results analysis.
+For example, a beauty cluster may correspond to salon and formulation users,
+while another may correspond to nail professionals, but these groups remain
+part of a continuous persona space.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/fig3_within_domain_clusters.pdf}
+  \caption{
+  \textbf{Soft persona groups within each application entry.}
+  For each entry, the 50 selected personas are clustered in a domain-specific
+  TF--IDF$\rightarrow$SVD space, with $k\in[3,6]$ chosen by silhouette score.
+  Low silhouettes and overlapping ellipses show that selected personas form
+  soft thematic groups rather than well-separated clusters.
+  }
+  \label{fig:within-clusters}
+\end{figure*}
+
+
+
+
+
+% \subsection{Persona Diversity}
+% \label{app:diversity}
+
+% \begin{wrapfigure}[17]{r}{0.56\textwidth}
+%     \centering
+%     \includegraphics[width=0.56\textwidth]{figures/fig3_within_domain_clusters.pdf}
+%     \caption{  \textbf{Diversity of selected personas.}
+%   For each application instance, the 50 selected personas are clustered in a TF--IDF$\rightarrow$SVD space. The overlapping clusters show that application-relevant personas form soft thematic groups.}
+%   \label{fig:within-clusters}
+% \end{wrapfigure}
+
+
+% \begin{figure*}[t]
+%   \centering
+%   \includegraphics[width=\textwidth]{figures/fig1_overall_diversity.pdf}
+%   \caption{\textbf{Overall diversity of the 300 selected Nemotron personas}
+%   (50 per application domain). Each persona's text (demographics, persona
+%   sections, attributes, and background) is encoded with TF--IDF (uni/bi-gram)
+%   and projected to two dimensions with truncated SVD; points are colored
+%   by domain and shaded ellipses mark each domain's $2\sigma$ coverage
+%   region. The domains occupy heavily overlapping regions of persona-text space,
+%   indicating that the selection preserves broad cross-domain profile similarity
+%   rather than separating domains by surface lexical features.}
+%   \label{fig:overall-diversity}
+% \end{figure*}
+
+% % ── Figure 2: within-domain diversity ─────────────────────────────────────
+% \begin{figure*}[t]
+%   \centering
+%   \includegraphics[width=\textwidth]{figures/fig2_within_domain_diversity.pdf}
+%   \caption{\textbf{Within-domain diversity of the selected personas.} For each
+%   application domain, its 50 personas are encoded with TF--IDF and projected to
+%   2-D with a domain-specific truncated SVD (axes are not comparable
+%   across panels). Point size is proportional to a persona's distance from
+%   its domain centroid---larger points are more distinctive within the
+%   domain---and the shaded ellipse is the $2\sigma$ coverage region. Each
+%   panel reports the mean pairwise cosine distance ($\bar d$) and the
+%   90th-percentile projected radius ($r_{90}$) computed in the reduced feature
+%   space. Every domain spreads across multiple profile regions, confirming that
+%   the per-domain test sets are not collapsed onto a single profile type.}
+%   \label{fig:within-diversity}
+% \end{figure*}
+
+
+
+

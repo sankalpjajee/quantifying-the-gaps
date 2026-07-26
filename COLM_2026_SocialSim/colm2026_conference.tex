@@ -1,0 +1,167 @@
+
+\documentclass{article} % For LaTeX2e
+\usepackage[submission]{colm2026_conference}
+
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{fontawesome5}
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{breakable}
+
+\usepackage[most]{tcolorbox}
+\usepackage{listings}
+\usepackage{upquote}      % straight quotes inside listings (for JSON)
+
+\definecolor{peframe}{HTML}{12343B}   % deep teal title bar / rule
+\definecolor{peback}{HTML}{F6F8F8}    % near-white box background
+
+
+% Better automatic references
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+% Capitalized names for normal sections
+\crefname{section}{Section}{Sections}
+\Crefname{section}{Section}{Sections}
+\crefname{subsection}{Section}{Sections}
+\Crefname{subsection}{Section}{Sections}
+\crefname{subsubsection}{Section}{Sections}
+\Crefname{subsubsection}{Section}{Sections}
+
+% Capitalized names for appendix labels
+\crefname{appendix}{Appendix}{Appendices}
+\Crefname{appendix}{Appendix}{Appendices}
+
+% Keep using \autoref in the paper, but route it through cleveref
+\let\oldautoref\autoref
+\renewcommand{\autoref}[1]{\Cref{#1}}
+
+
+\tcbset{pebox/.style={%
+  enhanced, breakable,
+  colback=peback, colframe=peframe, boxrule=0.6pt, arc=2pt,
+  left=2.5mm, right=2.5mm, top=1.4mm, bottom=1.4mm,
+  fonttitle=\bfseries\footnotesize, coltitle=white,
+  attach boxed title to top left={xshift=2mm, yshift=-2.6mm},
+  boxed title style={colback=peframe, arc=1pt, boxrule=0pt}}}
+
+\newtcolorbox[auto counter]{promptbox}[2][]{%
+  pebox, title={Box~\thetcbcounter\quad #2}, #1}
+
+\lstdefinestyle{pe}{%
+  basicstyle=\small\ttfamily, breaklines=true, columns=fullflexible,
+  keepspaces=true, showstringspaces=false, upquote=true,
+  aboveskip=2pt, belowskip=2pt, xleftmargin=1pt}
+\lstset{style=pe}
+
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+
+
+% NOTE: including geometry package
+% The geometery package modifies some page properties when used. This can dramatically change the page margins, leading to severe template violation, and potential desk rejection. If the package is required, it can be used with the "pass" flag to skip the default page modifications, as in the following line:
+% \usepackage[pass]{geometry}
+
+\usepackage{lineno}
+
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\hypersetup{colorlinks=true, citecolor=darkblue, linkcolor=darkblue, urlcolor=darkblue}
+
+% \newcommand{\method}{\textsc{PersonaEval}\xspace}
+\newcommand{\method}{PersonaEval\xspace}
+% PersonaEval? Matraix? PersonaEngine?.... From simulation to application: LLM based agent application
+
+\title{\method: Persona-Based User Simulation for Evaluating Interactive Applications}
+
+% Authors must not appear in the submitted version. This should be be taken care of automatically as long as you are using the "submission" option for the colm2026_conference package. But it's on the authors to verify. Non-anonymous submissions will be rejected without review.
+
+% co-first: Yifan Liu *, Qianfeng Wen *, Yilan (Eliza) Fan*, Shirley Huang *, Ruoqi Gao *, Jianheng (Jaden) Hou *,
+
+% * Equal Contribution
+% Muhammad Ahmed Mohsin, Zonglin Di, Brihi Joshi, Xincheng (Cara) Tan
+% Yucheng Lu, Xiaoyi Liu, Heming Liu, Hanwen Xing, Guanghui Min, Zhengyang Shan, My Chiffon Nguyen, Ishan Gupta, 
+
+%Contributors:
+%Yunze (Lorenzo) Xiao, Hannah Collison, Jintao Huang, Jiatong Li, Sankalp Jajee, Yunhan Zhao, Bing Hu, Sky Ng, Huangxing Chen, Xupeng Chen, Binghang Lu, Weihang Xiao, Aravind Mohan, Yunshu Wu, Yuanda Xu, Yun Shen, Runyu Zhang, Zheyuan Deng, Zhiwei Zhang, Qianyu Zhu, Dianzhuo Wang, Yijun Wang, Yixuan He
+
+%Team Leader \& Correspondence: Yuexing Hao (yuexing@mit.edu), Xiaomin Li (xiaominli@g.harvard.edu)\\
+
+\author{Antiquus S.~Hippocampus, Natalia Cerebro \& Amelie P. Amygdale \thanks{ Use footnote for providing further information
+about author (webpage, alternative address)---\emph{not} for acknowledging
+funding agencies.  Funding acknowledgements go at the end of the paper.} \\
+Department of Computer Science\\
+Cranberry-Lemon University\\
+Pittsburgh, PA 15213, USA \\
+\texttt{\{hippo,brain,jen\}@cs.cranberry-lemon.edu} \\
+\And
+Ji Q. Ren \& Yevgeny LeNet \\
+Department of Computational Neuroscience \\
+University of the Witwatersrand \\
+Joburg, South Africa \\
+\texttt{\{robot,net\}@wits.ac.za} \\
+\AND
+Coauthor \\
+Affiliation \\
+Address \\
+\texttt{email}
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+\setlength{\textfloatsep}{5pt}
+
+\begin{document}
+
+\ifcolmsubmission
+\linenumbers
+\fi
+
+\maketitle
+
+% [Yifan overall, Shirley, Eliza, Qianfeng]
+\input{body/00Abstract}
+\input{body/01Introduction}
+% Meeting notes:
+% motivation: industry, user study bottleneck, costly, persona can simulate user behavior, proxy for real user study. We proposed a system, linking user simulation to downstream tasks. with different application types.
+
+
+\input{body/02related_work}
+% 2 paragraphs:
+%     1. Persona Bench [Eliza + Rosie] [Ahmed] 
+%     2. Persona simulator [Eliza + Rosie]
+%         - survey [Shirley]
+%         - chatbot [Shirley]
+%         - web [Shirley]
+    % 3. Application [Shirley]
+% \input{body/persona_collection} [Eliza + Ruoqi]
+\input{body/03system_description} 
+% [Yifan, Jaden]
+\input{body/04application} 
+% [Shirley]
+\input{body/05results}
+\input{body/06conclusion}
+
+
+\clearpage
+\bibliography{colm2026_conference}
+\bibliographystyle{colm2026_conference}
+
+\appendix
+\input{body/99Appendix}
+
+\end{document}

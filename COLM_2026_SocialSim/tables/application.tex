@@ -1,0 +1,34 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedright\arraybackslash}p{0.46\linewidth}>{\raggedright\arraybackslash}p{0.34\linewidth}@{}}
+\toprule
+\textbf{Type} & \textbf{Domain (application source)} & \textbf{Task} \\
+\midrule
+Survey &
+Product/concept feedback (internal survey instrument) &
+Complete a survey after reading a brief. \\
+\midrule
+\multirow{3}{*}{Chatbot} &
+Recommendation: movie, beauty product, game (RecAI / InteRecAgent~\citep{huang2023recommender,lian2024recai}) &
+Request personalized recommendations. \\
+\cmidrule(lr){2-3}
+& Financial research (FinAI / OpenBB~\citep{openbb,openbbmcp}) &
+Ask market-data questions. \\
+\cmidrule(lr){2-3}
+& Medical consultation (Multi-Agent Medical Assistant~\citep{majumder2025medicalassistant}) &
+Describe symptoms and receive general guidance. \\
+\midrule
+\multirow{2}{*}{Web} &
+E-commerce product discovery (WebArena-style shopping site~\citep{zhou2024webarena}) &
+Search, compare, and select products. \\
+% \cmidrule(lr){2-3}
+% & Social forum interaction (WebArena-style forum~\citep{zhou2024webarena}) &
+% Seek advice or contribute forum information. \\
+\bottomrule
+\end{tabular}
+\caption{Application coverage in the current \method demo. Domain names are paired with their implementation sources, and each row gives the corresponding simulated user task.}
+\label{tab:application-coverage}
+\end{table*}

@@ -1,0 +1,12 @@
+\section{Introduction}
+
+Interactive applications can produce different outcomes across users because they bring different goals and preferences to the same system.  Understanding this variation is important during early development. Real user studies remain the most reliable way to measure human experience, but their cost, recruitment burden, and slow iteration cycle make them difficult to use for rapid evaluation~\citep{xuan2025gidea,lu2025uxagent}.
+
+Persona-based simulation offers a practical complement by simulating users with specified profiles and having them interact with a target system. Recent work has developed richer persona representations~\citep{zhang2018personachat,ge2024personahub,nvidia2025nemotron,deeppersona2025}, while LLM-based agent frameworks make it easier to deploy these personas as interactive agents~\citep{park2023generative,vezhnevets2023concordia,yang2024oasis,microsoft2024tinytroupe}. However, many existing pipelines are designed for a single task format, limiting the reuse of the same persona population across systems and interaction settings.
+
+Therefore, we introduce \method (\autoref{fig:personaeval}) as a plug-and-play system for persona-based user simulation for evaluating interactive applications. Our contributions are as follows:
+\begin{itemize}
+    \item \textbf{A plug-and-play persona simulation system.} We build \method \footnote{\href{https://anonymous.4open.science/r/persona-eval-4893}{Codes} and \href{https://anonymous.4open.science/r/persona-eval-4893}{demo video} uploaded.} as a modular system that connects persona-based simulated users to application adapters, allowing developers to plug different personas into different interactive systems while collecting interaction trajectories and task outcomes in a common format.
+
+    \item \textbf{A multi-application demonstration.} We instantiate \method on survey, chatbot, and web settings, demonstrating that our system can support evaluation across different interaction settings.
+\end{itemize}
